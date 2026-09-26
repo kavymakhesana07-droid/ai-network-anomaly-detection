@@ -5,9 +5,12 @@ python-dotenv==1.0.1
 pyyaml==6.0.1
 
 # Kafka/Redpanda
+# aiokafka        - async client, used by pcap ingestor + feature extractor
+# confluent-kafka - C client, required for high-rate NetFlow/sFlow/IPFIX ingest
+# kafka-python     - dropped: no module imports it and it is a maintenance-only
+#                    fork. Two clients is already more than this project needs.
 aiokafka==0.10.0
 confluent-kafka==2.5.0
-kafka-python==2.0.2
 
 # Serialization
 msgpack==1.0.8

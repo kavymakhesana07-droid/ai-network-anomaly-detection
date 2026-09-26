@@ -70,12 +70,20 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      - name: Free runner disk space
+        # ubuntu-latest ships large unused toolchains (Azure CLI, Android SDK,
+        # GHC). Reclaiming ~25 GB keeps dependency installs from hitting
+        # "No space left on device".
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h /
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements/base.txt
-          pip install -r requirements/ml.txt
-          pip install pytest pytest-cov pytest-mock
+          # Unit tests need only the test profile. Installing ml.txt here
+          # (torch, xgboost, mlflow, ...) exhausted the runner disk.
+          pip install -r requirements/test.txt
 
       - name: Run unit tests
         run: |

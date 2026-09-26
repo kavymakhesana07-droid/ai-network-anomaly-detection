@@ -56,6 +56,40 @@ class TestPyprojectIsValid:
         assert data["project"]["name"] == "anomaly-detection"
         assert data["project"]["requires-python"] == ">=3.11"
 
+    def test_version_is_static_not_dynamic(self):
+        """Dependabot's pip fetcher cannot resolve a dynamic version.
+
+        It silently reports '/pyproject.toml not parseable' and skips the repo.
+        """
+        import tomllib
+
+        with Path(REPO_ROOT / "pyproject.toml").open("rb") as fh:
+            project = tomllib.load(fh)["project"]
+        assert "version" in project, "static version required for Dependabot"
+        assert "dynamic" not in project, "dynamic metadata breaks Dependabot"
+        assert isinstance(project["version"], str)
+
+    def test_inline_tables_are_single_line(self):
+        """Regression guard for the bug that broke Dependabot.
+
+        TOML forbids newlines inside inline tables, so
+        ``per-file-ignores = {`` ... ``}`` spread over several lines is invalid
+        and tomllib raises. Assert every inline table stays on one line.
+        """
+        import tomllib
+
+        raw = Path(REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        for lineno, line in enumerate(raw.splitlines(), start=1):
+            stripped = line.strip()
+            if stripped.endswith("{"):
+                pytest.fail(
+                    f"pyproject.toml:{lineno} opens an inline table at end of line. "
+                    "TOML does not allow newlines inside {}. Use a [table.sub] header."
+                )
+        # And the file must still parse, which is the real contract.
+        with Path(REPO_ROOT / "pyproject.toml").open("rb") as fh:
+            tomllib.load(fh)
+
     def test_author_email(self):
         import tomllib
 

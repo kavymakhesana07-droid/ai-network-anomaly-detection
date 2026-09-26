@@ -1,0 +1,18 @@
+# Minimal dependency set for running the unit test suite.
+#
+# The unit tests exercise pure domain logic (flow key normalization, expiry,
+# entropy, feature summarization) and config/manifest validity. They must NOT
+# need Kafka, ML frameworks, or any running service - that keeps CI fast and
+# the suite runnable on a laptop with no Docker.
+#
+# Do NOT install requirements/ml.txt here. torch + torchvision + torchaudio +
+# xgboost + mlflow + great-expectations is multiple GB and previously filled the
+# GitHub Actions runner disk ("No space left on device").
+
+pydantic==2.8.2
+pyyaml==6.0.1
+
+pytest==8.2.2
+pytest-asyncio==0.23.3
+pytest-cov==5.0.0
+pytest-mock==3.13.0

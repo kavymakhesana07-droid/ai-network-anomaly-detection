@@ -98,7 +98,7 @@ make test
 
 ## Questions?
 
-Open an issue or contact: kanomakhesana@gmail.com
+Open an issue or contact: kavymakhesana07@gmail.com
 
 ---
 

@@ -197,7 +197,7 @@ jobs:
           k3d cluster create anomaly-detection --agents 2 -p "8080:80@loadbalancer" -p "8443:443@loadbalancer" --wait
 
       - name: Set up kubectl
-        uses: azure/k8s-set-context@v4
+        uses: azure/k8s-set-context@v5
         with:
           kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
 

@@ -24,12 +24,13 @@ onnxruntime==1.19.2
 onnxruntime-gpu==1.19.2  # optional, for GPU inference
 
 # Graph Neural Networks
+# NOTE: torch-geometric's native extensions (pyg-lib, torch-scatter,
+# torch-sparse, torch-cluster, torch-spline-conv) are NOT published on PyPI.
+# They must be installed from the PyTorch wheel index, e.g.
+#   pip install torch_geometric
+#   pip install pyg_lib torch_scatter -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
+# Kept out of the default install so CI stays reproducible on py3.11.
 torch-geometric==2.6.0
-pyg-lib==0.4.0
-torch-scatter==2.1.2
-torch-sparse==0.6.18
-torch-cluster==1.6.3
-torch-spline-conv==1.2.2
 
 # Experiment Tracking
 mlflow==2.15.1

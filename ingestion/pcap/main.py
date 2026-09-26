@@ -206,11 +206,14 @@ async def main() -> None:
         ]
     )
 
-    settings = Settings()
+    # PCAP_FILE is supplied via the environment (Kubernetes ConfigMap / .env).
+    # The type: ignore is required because pydantic-settings populates required
+    # fields from env at runtime, which mypy cannot infer.
+    settings = Settings()  # type: ignore[call-arg]
     ingestor = PCAPIngestor(settings)
 
     # Signal handling
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, lambda: asyncio.create_task(ingestor.stop()))
 

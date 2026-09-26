@@ -1,0 +1,20 @@
+# Deep path detection (batch/streaming ML)
+-r base.txt
+-r ml.txt
+
+# Streaming
+pyspark==3.5.0
+apache-flink==1.18.0  # if using Flink
+
+# Model serving
+tritonclient==2.49.0  # for Triton Inference Server
+torchserve==0.11.0
+
+# Advanced ML
+transformers==4.42.0
+accelerate==0.31.0
+peft==0.11.0
+
+# Hyperparameter tuning
+optuna==4.0.0
+ray==2.40.0  # for distributed tuning

@@ -1,0 +1,328 @@
+version: "3.9"
+
+services:
+  # =========================================================================
+  # Streaming Backbone
+  # =========================================================================
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.1
+    container_name: anomaly-redpanda
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+      - --rpc-addr=0.0.0.0:33145
+      - --schema-registry-addr=0.0.0.0:8081
+      - --http-addr=0.0.0.0:8080
+      - --mode=dev-container
+      - --default-topic-replications=1
+      - --num-partitions=6
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+      - "8081:8081"
+      - "8080:8080"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health --timeout 3s"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - anomaly-net
+
+  # =========================================================================
+  # Feature Extraction
+  # =========================================================================
+  feature-extractor:
+    build:
+      context: .
+      dockerfile: feature_extraction/Dockerfile
+    container_name: anomaly-feature-extractor
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - INPUT_TOPIC=raw.packets
+      - OUTPUT_TOPIC=features.flows
+      - CONSUMER_GROUP=feature-extractor
+      - FLOW_TIMEOUT=300
+      - BATCH_SIZE=100
+      - FLUSH_INTERVAL=1.0
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # =========================================================================
+  # Fast Path Detection
+  # =========================================================================
+  fast-path:
+    build:
+      context: .
+      dockerfile: detection/fast_path/Dockerfile
+    container_name: anomaly-fast-path
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - INPUT_TOPIC=features.flows
+      - OUTPUT_TOPIC=alerts.raw
+      - CONSUMER_GROUP=fast-path
+      - MODEL_PATH=/models/fast_path
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # =========================================================================
+  # Deep Path Detection (Batch)
+  # =========================================================================
+  deep-path:
+    build:
+      context: .
+      dockerfile: detection/deep_path/Dockerfile
+    container_name: anomaly-deep-path
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - INPUT_TOPIC=features.flows
+      - OUTPUT_TOPIC=alerts.deep
+      - CONSUMER_GROUP=deep-path
+      - MODEL_PATH=/models/deep_path
+      - SPARK_MASTER=local[*]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+
+  # =========================================================================
+  # Alerting & Correlation
+  # =========================================================================
+  alerting:
+    build:
+      context: .
+      dockerfile: alerting/Dockerfile
+    container_name: anomaly-alerting
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - INPUT_TOPICS=alerts.raw,alerts.deep
+      - OUTPUT_TOPIC=alerts.enriched
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # =========================================================================
+  # Output Integrations
+  # =========================================================================
+  dashboard:
+    build:
+      context: .
+      dockerfile: output/dashboard/Dockerfile
+    container_name: anomaly-dashboard
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - ALERTS_TOPIC=alerts.enriched
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "8501:8501"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # =========================================================================
+  # SIEM Output (Elasticsearch)
+  # =========================================================================
+  siem-output:
+    build:
+      context: .
+      dockerfile: output/siem/Dockerfile
+    container_name: anomaly-siem-output
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - ALERTS_TOPIC=alerts.enriched
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=network-alerts
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # =========================================================================
+  # Infrastructure
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: anomaly-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - anomaly-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: anomaly-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # =========================================================================
+  # MLflow (Experiment Tracking)
+  # =========================================================================
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.15.1
+    container_name: anomaly-mlflow
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlartifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    networks:
+      - anomaly-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # =========================================================================
+  # Monitoring Stack
+  # =========================================================================
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: anomaly-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - anomaly-net
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: anomaly-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - anomaly-net
+
+  # =========================================================================
+  # PCAP Ingestor (run as job)
+  # =========================================================================
+  pcap-ingestor:
+    build:
+      context: .
+      dockerfile: ingestion/pcap/Dockerfile
+    container_name: anomaly-pcap-ingestor
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - TOPIC=raw.packets
+      - PCAP_FILE=/data/sample.pcap
+      - BATCH_PACKETS=1000
+      - REPLAY_SPEED=1.0
+    volumes:
+      - ./data:/data:ro
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - ingest
+
+networks:
+  anomaly-net:
+    driver: bridge
+
+volumes:
+  redpanda-data:
+  redis-data:
+  es-data:
+  prometheus-data:
+  grafana-data:
+  mlflow-data:

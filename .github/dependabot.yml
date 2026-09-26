@@ -1,0 +1,52 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps(pip)"
+    groups:
+      ml-deps:
+        patterns:
+          - "torch*"
+          - "numpy"
+          - "scikit-learn"
+          - "pandas"
+          - "xgboost"
+      web-deps:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "streamlit"
+      kafka-deps:
+        patterns:
+          - "kafka*"
+          - "aiokafka"
+          - "confluent-kafka"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "docker"

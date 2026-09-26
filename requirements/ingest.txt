@@ -1,0 +1,23 @@
+# Packet capture and network protocol parsing
+-r base.txt
+
+# PCAP processing
+scapy==2.5.6
+pyshark==0.6
+dpkt==1.9.8
+
+# NetFlow/sFlow/IPFIX
+flow-container==0.1.2
+pyflowmeter==0.1.0
+
+# Zeek/Suricata log parsing
+zeek-client==0.1.0
+
+# Cloud
+boto3==1.35.0
+google-cloud-logging==3.11.0
+azure-monitor-query==1.2.0
+
+# Async I/O
+aiofiles==23.2.1
+aiohttp==3.9.5

@@ -1,0 +1,19 @@
+# Output integrations (SIEM, Dashboard, ChatOps)
+-r base.txt
+
+# SIEM
+elasticsearch==8.14.0
+opensearch-py==2.5.0
+
+# ChatOps
+slack-sdk==3.26.0
+pagerduty==5.0.2
+mattermostdriver==5.7.0
+
+# Dashboard
+streamlit==1.37.0
+fastapi==0.111.0
+uvicorn==0.30.1
+
+# Webhooks
+webhook-client==1.0.0

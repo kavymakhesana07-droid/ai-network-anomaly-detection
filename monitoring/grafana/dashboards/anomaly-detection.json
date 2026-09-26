@@ -1,0 +1,146 @@
+{
+  "dashboard": {
+    "title": "AI Network Anomaly Detection",
+    "uid": "anomaly-detection",
+    "tags": ["network", "security", "anomaly", "ml"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Packets Ingested (rate)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(anomaly_packets_ingested_total[5m])",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "pps"}, {"format": "short"}],
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+      },
+      {
+        "id": 2,
+        "title": "Features Extracted (rate)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(anomaly_features_extracted_total[5m])",
+            "legendFormat": "features/sec"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "fps"}, {"format": "short"}],
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}
+      },
+      {
+        "id": 3,
+        "title": "Fast Path Alerts",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(anomaly_fast_path_alerts_total[5m])",
+            "legendFormat": "{{severity}}"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "alerts/sec"}, {"format": "short"}],
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+      },
+      {
+        "id": 4,
+        "title": "Deep Path Alerts",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(anomaly_deep_path_alerts_total[5m])",
+            "legendFormat": "{{attack_type}}"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "alerts/sec"}, {"format": "short"}],
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+      },
+      {
+        "id": 5,
+        "title": "Active Flows",
+        "type": "stat",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "anomaly_active_flows",
+            "legendFormat": "flows"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 16, "w": 6, "h": 4}
+      },
+      {
+        "id": 6,
+        "title": "Kafka Lag (consumer groups)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "kafka_consumergroup_lag",
+            "legendFormat": "{{consumergroup}} - {{topic}}"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "short"}, {"format": "short"}],
+        "gridPos": {"x": 6, "y": 16, "w": 18, "h": 8}
+      },
+      {
+        "id": 7,
+        "title": "Model Inference Latency (p50/p95/p99)",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(anomaly_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(anomaly_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(anomaly_inference_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "s"}, {"format": "short"}],
+        "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8}
+      },
+      {
+        "id": 8,
+        "title": "System Resources",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "container_cpu_usage_seconds_total",
+            "legendFormat": "CPU - {{container}}"
+          },
+          {
+            "expr": "container_memory_usage_bytes / 1024 / 1024 / 1024",
+            "legendFormat": "Memory (GB) - {{container}}"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxes": [{"format": "cores"}, {"format": "GB"}],
+        "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "10s"
+  },
+  "overwrite": true
+}

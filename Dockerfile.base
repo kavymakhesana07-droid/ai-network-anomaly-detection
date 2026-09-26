@@ -1,0 +1,28 @@
+# Base image for all Python services
+# Build: docker build -f Dockerfile.base -t anomaly-detection/base:latest .
+
+FROM python:3.11-slim AS base
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpcap-dev \
+    gcc \
+    g++ \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps - common
+COPY requirements/base.txt /tmp/requirements/base.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /tmp/requirements/base.txt
+
+# Non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+WORKDIR /app
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Default entrypoint
+ENTRYPOINT ["python", "-m"]

@@ -26,6 +26,14 @@ from feature_extraction.models import (
 logger = structlog.get_logger(__name__)
 
 
+class ServiceNotStartedError(RuntimeError):
+    """Raised when a lifecycle method is called before ``start()``."""
+
+    def __init__(self, method: str) -> None:
+        super().__init__(f"{method}() called before start()")
+        self.method = method
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -106,7 +114,9 @@ class FeatureExtractor:
         last_flush = loop.time()
         last_cleanup = last_flush
 
-        assert self.consumer is not None
+        if self.consumer is None:
+            raise ServiceNotStartedError("run")
+
         async for msg in self.consumer:
             if not self.running:
                 break

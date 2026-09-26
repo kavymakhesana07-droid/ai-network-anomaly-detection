@@ -203,9 +203,8 @@ markers = [
     "gpu: Requires GPU",
 ]
 
-[tool.bandit]
-exclude_dirs = ["tests", "scripts", ".venv", "venv"]
-skips = ["B101", "B601", "B603", "B607"]
+# NOTE: Bandit does NOT read [tool.bandit] from pyproject.toml. Its config
+# lives in ./.bandit (the format Bandit actually auto-discovers).
 
 [tool.coverage.run]
 source = ["ingestion", "feature_extraction", "detection", "alerting", "output"]

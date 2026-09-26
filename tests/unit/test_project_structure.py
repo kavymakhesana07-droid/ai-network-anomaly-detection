@@ -13,6 +13,39 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _env_assignments(path: Path) -> dict[str, str]:
+    """Parse ``ENV KEY=value`` pairs out of a Dockerfile, ignoring comments.
+
+    Handles both the single-line (``ENV A=1 B=2``) and backslash-continued
+    (``ENV A=1 \\`` / ``    B=2``) forms. Comments are stripped first, otherwise
+    a comment that happens to name a variable satisfies the check for it.
+    """
+    body = "\n".join(
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if not line.lstrip().startswith("#")
+    )
+    # Join backslash continuations into one logical line.
+    body = re.sub(r"\\\n\s*", " ", body)
+
+    assignments: dict[str, str] = {}
+    for match in re.finditer(r"^ENV\s+(.*)$", body, re.IGNORECASE | re.MULTILINE):
+        for pair in re.findall(r"([A-Za-z_][A-Za-z0-9_]*)=(\"[^\"]*\"|\S+)", match.group(1)):
+            assignments[pair[0]] = pair[1].strip('"')
+    return assignments
+
+
+def _dockerfiles() -> list[Path]:
+    """Every Dockerfile in the repo, base and service alike.
+
+    Dockerfile.base is included deliberately: the rules below hold for it too,
+    and it is the file that defines the convention the services follow.
+    """
+    return sorted(
+        p for p in REPO_ROOT.rglob("Dockerfile*") if "__pycache__" not in p.parts and p.is_file()
+    )
+
+
 class TestProjectStructure:
     @pytest.mark.parametrize(
         "path",
@@ -123,6 +156,94 @@ class TestDockerImages:
     def test_makefile_builds_base_before_services(self):
         makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
         assert "build: base" in makefile, "`make build` must depend on `make base`"
+
+    def test_service_dockerfile_does_not_pip_install_as_non_root(self):
+        """`pip install` must never run after a `USER` drop to an unprivileged user.
+
+        The first build of ingestion/pcap failed with
+        "OSError: [Errno 13] Permission denied: '/home/appuser'". The image
+        dropped to `USER appuser` and then ran `pip install`. pip cannot write
+        the root-owned venv, so it silently retried into the per-user site
+        directory, and died creating the home directory it had never been given.
+        Installing as root at build time is the correct behaviour anyway: a
+        service must not be able to mutate its own environment at runtime.
+        """
+        for path in _dockerfiles():
+            text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(REPO_ROOT)
+            current_user = "root"
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                stripped = line.strip()
+                match = re.match(r"USER\s+(\S+)", stripped, re.IGNORECASE)
+                if match:
+                    current_user = match.group(1)
+                    continue
+                if re.search(r"\bpip3?\s+install\b", stripped) and current_user != "root":
+                    pytest.fail(
+                        f"{rel}:{lineno}: pip install runs as '{current_user}'. "
+                        f"Move it above the USER drop, or use USER root for it."
+                    )
+
+    def test_service_dockerfile_returns_to_non_root_user(self):
+        """A Dockerfile that drops to root for apt must switch back before it ends.
+
+        ingestion/pcap needed `USER root` to run apt-get. Because Dockerfile.base
+        ends with `USER appuser` and nothing restored it, the built container ran
+        as root - so the non-root user, the `chown /app`, and the whole point of
+        the base image were all dead code, silently.
+        """
+        for path in _dockerfiles():
+            text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(REPO_ROOT)
+            users = re.findall(r"^USER\s+(\S+)", text, re.IGNORECASE | re.MULTILINE)
+            if "root" not in users:
+                continue
+            assert users[-1] != "root", (
+                f"{rel} ends as USER root, so the container runs as root. "
+                f"Add `USER appuser` after the last root-only step."
+            )
+
+    def test_base_image_disables_user_site_installs(self):
+        """PYTHONNOUSERSITE must be set, so a bad pip call fails loudly.
+
+        Without it pip falls back to ~/.local when the target is not writable,
+        which turns a one-line build error into a confusing filesystem error
+        several seconds later.
+
+        This inspects ENV instructions only, not the whole file: the name also
+        appears in the explanatory comment above it, and a substring check would
+        be satisfied by that comment alone.
+        """
+        envs = _env_assignments(REPO_ROOT / "Dockerfile.base")
+        assert envs.get("PYTHONNOUSERSITE") == "1", (
+            "Dockerfile.base must set ENV PYTHONNOUSERSITE=1 to stop pip from "
+            f"silently falling back to the user site directory; got "
+            f"{envs.get('PYTHONNOUSERSITE')!r}"
+        )
+
+    def test_base_image_installs_into_a_virtualenv(self):
+        """Deps live in a root-owned venv, not the system site-packages.
+
+        This is what lets the service images install as root while still running
+        as appuser, and it is why the non-root user can import everything.
+        """
+        text = (REPO_ROOT / "Dockerfile.base").read_text(encoding="utf-8")
+        assert re.search(r"ENV\s+VIRTUAL_ENV=/opt/venv", text), (
+            "Dockerfile.base must define VIRTUAL_ENV=/opt/venv"
+        )
+        assert "python -m venv ${VIRTUAL_ENV}" in text, (
+            "Dockerfile.base must create the venv before installing into it"
+        )
+
+    def test_base_image_creates_a_real_home_directory(self):
+        """`useradd -m`, not bare `useradd`, so /home/appuser actually exists."""
+        text = (REPO_ROOT / "Dockerfile.base").read_text(encoding="utf-8")
+        useradd = re.search(r"\buseradd\b[^\n\\]*(?:\\\n[^\n\\]*)*", text)
+        assert useradd, "Dockerfile.base must create appuser with useradd"
+        flags = useradd.group(0)
+        assert re.search(r"(?:^|\s)-m(?:\s|$)", flags), (
+            f"useradd needs -m, otherwise the home directory is never created: {flags!r}"
+        )
 
 
 class TestRequirementPins:

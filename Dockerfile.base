@@ -13,13 +13,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Packages are installed into a root-owned virtualenv rather than the system
+# site-packages. A service image installs its deps as root at build time and
+# then runs as an unprivileged user, so the venv must be readable and executable
+# by appuser but not writable by it.
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv ${VIRTUAL_ENV}
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+# PYTHONNOUSERSITE stops pip from silently falling back to ~/.local when the
+# target directory is not writable. Without it a non-root "pip install" appears
+# to succeed per-package and then dies partway with
+# "OSError: [Errno 13] Permission denied: '/home/appuser'". With it, the same
+# mistake fails immediately and points at the real cause.
+ENV PYTHONNOUSERSITE=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
 # Python deps - common
 COPY requirements/base.txt /tmp/requirements/base.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements/base.txt
 
-# Non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Non-root user. -m creates the home directory; -d gives it a stable id even if
+# another image in the chain already allocated that uid.
+RUN groupadd -r appuser \
+    && useradd -r -m -d /home/appuser -g appuser -u 10001 appuser
+
 WORKDIR /app
 RUN chown -R appuser:appuser /app
 USER appuser

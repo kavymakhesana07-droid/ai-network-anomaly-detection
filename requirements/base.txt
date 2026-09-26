@@ -33,8 +33,7 @@ pytest-asyncio==0.23.3
 pytest-cov==5.0.0
 pytest-mock==3.13.0
 
-# Linting/Formatting
-ruff==0.5.7
-black==24.8.0
+# Linting/Formatting (ruff handles both lint + format; black intentionally omitted)
+ruff==0.16.9
 mypy==1.11.2
 bandit==1.7.8

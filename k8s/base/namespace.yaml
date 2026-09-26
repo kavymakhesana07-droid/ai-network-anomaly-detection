@@ -4,7 +4,6 @@ metadata:
   name: anomaly-detection
   labels:
     name: anomaly-detection
-    environment: "{{ .Values.global.environment | default "dev" }}"
     managed-by: kustomize
 ---
 apiVersion: v1

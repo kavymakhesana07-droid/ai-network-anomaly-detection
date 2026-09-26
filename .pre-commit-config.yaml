@@ -1,29 +1,26 @@
 repos:
+  # Ruff handles both linting and formatting (black-compatible).
+  # Running black alongside ruff-format causes conflicts - ruff only.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.7
+    rev: v0.16.9
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
-    hooks:
-      - id: black
-        language_version: python3.11
-
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
+        files: ^(ingestion|feature_extraction|detection|alerting|output)/
+        additional_dependencies: [pydantic, pydantic-settings, types-all]
         args: [--strict]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.8
     hooks:
       - id: bandit
-        args: [-r, ., -x, tests, -x, scripts]
+        args: [-r, ingestion, -r, feature_extraction, -x, tests, -x, scripts]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -31,16 +28,18 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^k8s/overlays/
       - id: check-toml
       - id: check-json
       - id: check-merge-conflict
-      - id: debug-logger
       - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=2000]
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.2
     hooks:
       - id: gitleaks
 
-default_stages: [commit]
-fail_fast: true
+default_stages: [pre-commit]
+fail_fast: false

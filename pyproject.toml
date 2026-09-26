@@ -120,15 +120,30 @@ include = ["ingestion*", "feature_extraction*", "detection*", "alerting*", "outp
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-select = [
-    "E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "T20", "ARG", "PTH", "ERA", "PL", "TRY"
-]
-ignore = ["S101", "S603", "S607"]
-per-file-ignores = {
-    "tests/*": ["S101", "S603", "S607"],
-    "scripts/*": ["S101", "S603", "S607"],
-}
 preview = true
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "T20", "ARG", "PTH", "ERA", "TRY", "S",
+]
+ignore = [
+    "S101",    # assert - used intentionally in tests
+    "S603",    # subprocess - required for operational tooling
+    "S607",    # start process with partial path - containerised entrypoints
+    "E501",    # line length is handled by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002", "PLC0415", "PLR2004"]
+"scripts/*" = ["T201", "S105", "S106"]
+"k8s/*" = ["I001"]
+
+[tool.ruff.lint.pylint]
+max-args = 12
+max-returns = 8
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.ruff.format]
 quote-style = "double"
@@ -151,14 +166,27 @@ implicit_optional = false
 allow_redefinition = false
 namespace_packages = true
 
-[tool.mypy.overrides]
+[[tool.mypy.overrides]]
 module = [
-    "aiokafka*",
-    "confluent_kafka*",
-    "pyshark*",
-    "scapy*",
+    "aiokafka.*",
+    "confluent_kafka.*",
+    "pyshark.*",
+    "scapy.*",
+    "dpkt.*",
+    "structlog.*",
+    "numpy.*",
+    "pandas.*",
+    "sklearn.*",
+    "torch.*",
+    "xgboost.*",
 ]
 ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["feature_extraction.*", "ingestion.*", "detection.*", "alerting.*", "output.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

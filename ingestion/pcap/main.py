@@ -4,16 +4,13 @@ Production-grade: batching, backpressure, checkpointing, metrics.
 """
 
 import asyncio
-import os
 import signal
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import structlog
 from aiokafka import AIOKafkaProducer
-from aiokafka.errors import KafkaConnectionError
-from pydantic import BaseModel, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = structlog.get_logger(__name__)
@@ -35,7 +32,7 @@ class Settings(BaseSettings):
     replay_speed: float = Field(default=1.0, alias="REPLAY_SPEED")  # 1.0 = realtime
 
     # Checkpointing
-    checkpoint_dir: str = Field(default="/tmp/checkpoints", alias="CHECKPOINT_DIR")
+    checkpoint_dir: str = Field(default="./data/checkpoints", alias="CHECKPOINT_DIR")
     checkpoint_interval: int = Field(default=10000, alias="CHECKPOINT_INTERVAL")
 
     # Metrics
@@ -57,15 +54,17 @@ class PacketRecord:
 
 
 class PCAPIngestor:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.producer: Optional[AIOKafkaProducer] = None
+        self.producer: AIOKafkaProducer | None = None
         self.running = False
         self.packets_sent = 0
         self.packets_failed = 0
-        self._checkpoint_file = Path(settings.checkpoint_dir) / f"{Path(settings.pcap_file).stem}.checkpoint"
+        self._checkpoint_file = (
+            Path(settings.checkpoint_dir) / f"{Path(settings.pcap_file).stem}.checkpoint"
+        )
 
-    async def start(self):
+    async def start(self) -> None:
         """Initialize Kafka producer."""
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.settings.kafka_brokers,
@@ -79,7 +78,7 @@ class PCAPIngestor:
         await self.producer.start()
         logger.info("Kafka producer started", brokers=self.settings.kafka_brokers)
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Graceful shutdown."""
         self.running = False
         if self.producer:
@@ -88,28 +87,29 @@ class PCAPIngestor:
 
     def _load_checkpoint(self) -> int:
         """Load last processed packet number."""
-        if self._checkpoint_file.exists():
-            try:
-                return int(self._checkpoint_file.read_text().strip())
-            except Exception:
-                pass
-        return 0
+        if not self._checkpoint_file.exists():
+            return 0
+        try:
+            return int(self._checkpoint_file.read_text().strip())
+        except (ValueError, OSError) as exc:
+            logger.warning("unreadable checkpoint, restarting from 0", error=str(exc))
+            return 0
 
-    def _save_checkpoint(self, packet_num: int):
+    def _save_checkpoint(self, packet_num: int) -> None:
         """Save checkpoint atomically."""
         self._checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
         tmp = self._checkpoint_file.with_suffix(".tmp")
         tmp.write_text(str(packet_num))
         tmp.replace(self._checkpoint_file)
 
-    async def process_pcap(self):
+    async def process_pcap(self) -> None:
         """Process PCAP file with Scapy."""
         from scapy.utils import PcapReader
-        from scapy.layers.inet import IP, TCP, UDP
-        from scapy.layers.inet6 import IPv6
 
         start_packet = self._load_checkpoint()
-        logger.info("Starting PCAP processing", file=self.settings.pcap_file, resume_from=start_packet)
+        logger.info(
+            "Starting PCAP processing", file=self.settings.pcap_file, resume_from=start_packet
+        )
 
         packet_count = 0
         batch = []
@@ -142,67 +142,62 @@ class PCAPIngestor:
                         if self.settings.replay_speed > 0:
                             await asyncio.sleep(len(batch) / (self.settings.replay_speed * 1000))
 
-        except Exception as e:
-            logger.error("PCAP processing error", error=str(e))
+        except Exception:
+            logger.exception("PCAP processing failed", file=self.settings.pcap_file)
             raise
         finally:
             if batch:
                 await self._flush_batch(batch)
             self._save_checkpoint(packet_count)
 
-    def _parse_packet(self, pkt, packet_number: int) -> Optional[PacketRecord]:
+    def _parse_packet(self, pkt, packet_number: int) -> PacketRecord | None:
         """Extract flow features from packet."""
         from scapy.layers.inet import IP, TCP, UDP
         from scapy.layers.inet6 import IPv6
 
         try:
-            # IP layer
-            ip_layer = pkt[IP] if IP in pkt else (pkt[IPv6] if IPv6 in pkt else None)
-            if not ip_layer:
+            ip_layer = pkt.get(IP) or pkt.get(IPv6)
+            if ip_layer is None:
                 return None
 
-            # Transport layer
-            transport = pkt[TCP] if TCP in pkt else (pkt[UDP] if UDP in pkt else None)
-            if not transport:
+            transport = pkt.get(TCP) or pkt.get(UDP)
+            if transport is None:
                 return None
 
             return PacketRecord(
                 timestamp=float(pkt.time),
                 src_ip=ip_layer.src,
                 dst_ip=ip_layer.dst,
-                src_port=transport.sport,
-                dst_port=transport.dport,
-                protocol=ip_layer.proto,
+                src_port=int(transport.sport),
+                dst_port=int(transport.dport),
+                protocol=int(ip_layer.proto),
                 length=len(pkt),
-                payload=bytes(transport.payload)[:1024],  # Truncate
+                payload=bytes(transport.payload)[:1024],
                 pcap_file=self.settings.pcap_file,
                 packet_number=packet_number,
             )
-        except Exception as e:
-            logger.debug("Packet parse error", error=str(e), packet=packet_number)
+        except (AttributeError, TypeError, ValueError) as exc:
+            logger.debug("packet parse error", error=str(exc), packet=packet_number)
             return None
 
-    async def _flush_batch(self, batch: list[PacketRecord]):
+    async def _flush_batch(self, batch: list[PacketRecord]) -> None:
         """Send batch to Kafka."""
-        if not self.producer:
+        if not self.producer or not batch:
             return
 
         try:
-            # Send all in batch
             futures = [
-                self.producer.send_and_wait(self.settings.kafka_topic, record)
-                for record in batch
+                self.producer.send_and_wait(self.settings.kafka_topic, record) for record in batch
             ]
             await asyncio.gather(*futures)
             self.packets_sent += len(batch)
-            logger.debug("Batch sent", count=len(batch), total=self.packets_sent)
-        except Exception as e:
+            logger.debug("batch flushed", count=len(batch), total=self.packets_sent)
+        except Exception:
             self.packets_failed += len(batch)
-            logger.error("Batch send failed", error=str(e), count=len(batch))
-            # Could implement dead letter queue here
+            logger.exception("batch send failed", count=len(batch))
 
 
-async def main():
+async def main() -> None:
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="iso"),

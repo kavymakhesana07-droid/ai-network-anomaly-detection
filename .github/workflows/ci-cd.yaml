@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, main, develop]
   pull_request:
-    branches: [main]
+    branches: [master, main]
   workflow_dispatch:
     inputs:
       deploy_env:
@@ -39,20 +39,21 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements/base.txt
-          pip install ruff black mypy bandit
+          pip install ruff mypy bandit
 
-      - name: Run Ruff
+      - name: Ruff lint
         run: ruff check .
 
-      - name: Run Black
-        run: black --check .
+      - name: Ruff format check
+        run: ruff format --check .
 
-      - name: Run MyPy
-        run: mypy --strict ingestion detection feature_extraction alerting output
+      - name: MyPy (strict)
+        run: |
+          pip install -r requirements/base.txt
+          mypy --strict ingestion feature_extraction detection alerting output
 
-      - name: Run Bandit
-        run: bandit -r ingestion detection feature_extraction alerting output
+      - name: Bandit (security lint)
+        run: bandit -r ingestion feature_extraction detection alerting output -x tests
 
   # =========================================================================
   # Unit Tests
@@ -131,20 +132,23 @@ jobs:
       packages: write
     strategy:
       matrix:
+        # Only services with a committed Dockerfile are listed here.
+        # Grows as each ingestor/detector is implemented (see Day plan).
         service:
           - ingestion/pcap
-          - ingestion/live_capture
-          - ingestion/netflow
-          - ingestion/zeek
-          - ingestion/cloud_flows
-          - feature_extraction
-          - detection/fast_path
-          - detection/deep_path
-          - detection/model_registry
-          - alerting
-          - output/siem
-          - output/dashboard
-          - output/integrations
+        # --- Uncomment as these are built (Day 2-8) ---
+        # - ingestion/live_capture
+        # - ingestion/netflow
+        # - ingestion/zeek
+        # - ingestion/cloud_flows
+        # - feature_extraction
+        # - detection/fast_path
+        # - detection/deep_path
+        # - detection/model_registry
+        # - alerting
+        # - output/siem
+        # - output/dashboard
+        # - output/integrations
     steps:
       - uses: actions/checkout@v4
 
@@ -186,6 +190,8 @@ jobs:
     name: Deploy to Dev
     needs: [build, test-integration]
     if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    # NOTE: Requires secrets.KUBECONFIG_DEV. Disabled until Day 9 when the
+    # k3d dev overlay is verified end-to-end.
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -217,7 +223,7 @@ jobs:
   deploy-prod:
     name: Deploy to Prod
     needs: [build, test-integration]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch' && inputs.deploy_env == 'prod'
     runs-on: ubuntu-latest
     environment: production
     steps:

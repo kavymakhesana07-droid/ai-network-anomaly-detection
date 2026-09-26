@@ -101,4 +101,4 @@ MIT - See [LICENSE](LICENSE)
 
 **Kavy Makhesana** - 3rd Year B.Tech Cyber Security, Parul University
 - CCST Networking | ISC2 Candidate | Ethical Hacking (130hr) | CTF Player
-- [LinkedIn](https://www.linkedin.com/in/kavy-makhesana-77598a328/) | [TryHackMe](https://tryhackme.com/p/KavyMakhesana) | [GitHub](https://github.com/kavymakhesana07-droid)
+- [LinkedIn](https://www.linkedin.com/in/kavy-makhesana-77598a328/) | [TryHackMe](https://tryhackme.com/p/KavyMakhesana)

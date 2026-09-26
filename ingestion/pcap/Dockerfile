@@ -1,5 +1,10 @@
 # PCAP Ingestor Service
-FROM anomaly-detection/base:latest AS builder
+#
+# BASE_IMAGE defaults to the locally built base image ("make base"). CI
+# overrides it with the published ghcr.io tag via --build-arg so the runner
+# does not need to build the base first.
+ARG BASE_IMAGE=anomaly-detection/base:latest
+FROM ${BASE_IMAGE} AS builder
 
 # Additional system deps for PCAP
 USER root

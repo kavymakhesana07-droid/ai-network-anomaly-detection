@@ -71,6 +71,58 @@ class TestProjectStructure:
             assert init.parent.is_dir()
 
 
+class TestDockerImages:
+    """The base image must exist before any service image can build.
+
+    A service Dockerfile that does `FROM anomaly-detection/base:latest` with no
+    ARG override fails on a clean CI runner with
+    "pull access denied, repository does not exist", because that tag only
+    exists in a developer's local image store.
+    """
+
+    def test_base_image_is_declared_in_compose(self):
+        import yaml
+
+        with (REPO_ROOT / "docker-compose.yml").open(encoding="utf-8") as fh:
+            services = yaml.safe_load(fh)["services"]
+        assert "base" in services, "compose must declare the shared base image"
+        build = services["base"]["build"]
+        assert build["dockerfile"] == "Dockerfile.base"
+
+    def test_base_image_never_starts(self):
+        """The base is built, not run - it must stay behind a profile."""
+        import yaml
+
+        with (REPO_ROOT / "docker-compose.yml").open(encoding="utf-8") as fh:
+            base = yaml.safe_load(fh)["services"]["base"]
+        assert "build-only" in base.get("profiles", []), (
+            "base must be profile-gated so `docker compose up` does not try to run it"
+        )
+
+    def test_service_dockerfiles_use_overridable_base(self):
+        service_dockerfiles = sorted(
+            p
+            for p in REPO_ROOT.rglob("Dockerfile")
+            if "__pycache__" not in p.parts and p.name != "Dockerfile.base"
+        )
+        assert service_dockerfiles, "expected at least one service Dockerfile"
+
+        for path in service_dockerfiles:
+            text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(REPO_ROOT)
+            assert "ARG BASE_IMAGE=" in text, (
+                f"{rel} must declare ARG BASE_IMAGE so CI can inject the published tag"
+            )
+            assert "FROM ${BASE_IMAGE}" in text, f"{rel} must build FROM ${{BASE_IMAGE}}"
+            assert "FROM anomaly-detection/base" not in text, (
+                f"{rel} hardcodes the base image instead of using the ARG"
+            )
+
+    def test_makefile_builds_base_before_services(self):
+        makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+        assert "build: base" in makefile, "`make build` must depend on `make base`"
+
+
 class TestPyprojectIsValid:
     def test_pyproject_parses(self):
         import tomllib

@@ -2,6 +2,21 @@ version: "3.9"
 
 services:
   # =========================================================================
+  # Shared Base Image
+  # =========================================================================
+  # Every service image extends anomaly-detection/base:latest (see
+  # Dockerfile.base). Declaring it as a service means `docker compose build`
+  # produces it first, so no service build fails on a missing base.
+  # It is never started - only built.
+  base:
+    image: anomaly-detection/base:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    profiles:
+      - build-only
+
+  # =========================================================================
   # Streaming Backbone
   # =========================================================================
   redpanda:

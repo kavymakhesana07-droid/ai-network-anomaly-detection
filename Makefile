@@ -1,11 +1,17 @@
 # AI Network Anomaly Detection - Makefile
 # Usage: make <target>
 
-.PHONY: help cluster-up cluster-down deploy-dev deploy-prod ingest-pcap ingest-live train-fast train-deep test lint fmt dashboard logs clean
+.PHONY: help base build up down cluster-up cluster-down deploy-dev deploy-prod ingest-pcap ingest-live train-fast train-deep train-gnn test test-unit test-integration test-e2e lint fmt dashboard logs clean
 
 # Default target
 help:
 	@echo "AI Network Anomaly Detection System"
+	@echo ""
+	@echo "Images:"
+	@echo "  make base                - Build shared base image (must run first)"
+	@echo "  make build               - Build all service images"
+	@echo "  make up                  - Start the local Docker Compose stack"
+	@echo "  make down                - Stop the local Docker Compose stack"
 	@echo ""
 	@echo "Cluster Management:"
 	@echo "  make cluster-up          - Start k3d local cluster"
@@ -34,6 +40,36 @@ help:
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean               - Clean build artifacts"
+
+# =============================================================================
+# Images
+# =============================================================================
+# Every service Dockerfile starts with:
+#   ARG BASE_IMAGE=anomaly-detection/base:latest
+#   FROM ${BASE_IMAGE} AS builder
+# so the shared base must exist in the local image store before any service
+# build. `make build` therefore always runs `make base` first.
+#
+# Override BASE_IMAGE to build against a published base instead:
+#   make build BASE_IMAGE=ghcr.io/kavymakhesana07-droid/ai-network-anomaly-detection/base:latest
+BASE_IMAGE ?= anomaly-detection/base:latest
+
+base:
+	docker build -f Dockerfile.base -t $(BASE_IMAGE) .
+
+build: base
+	docker compose build
+
+# Build the base only, via compose. Equivalent to `make base`; useful when you
+# want compose to own the build cache and labels.
+build-base:
+	docker compose --profile build-only build base
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
 
 # =============================================================================
 # Cluster Management

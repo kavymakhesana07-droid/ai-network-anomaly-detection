@@ -1,9 +1,11 @@
-"""Smoke tests that verify the project structure and config stay valid.
+"""Regression guards for the repository layout, config, and manifests.
 
 These act as a canary: if the repo layout or config breaks, CI fails loudly
-instead of silently passing.
+instead of silently passing. Most of the cases here were written in response to
+a real failure, so each docstring records what broke and why.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -121,6 +123,60 @@ class TestDockerImages:
     def test_makefile_builds_base_before_services(self):
         makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
         assert "build: base" in makefile, "`make build` must depend on `make base`"
+
+
+class TestRequirementPins:
+    """Every `==` pin must name a version that PyPI actually published.
+
+    A phantom pin is invisible locally and only surfaces as
+    "No matching distribution found for scapy==2.5.6" deep inside a Docker
+    build, which costs a full CI cycle per mistake.
+    """
+
+    # Extras are part of the name for pip ("coverage[toml]") but not for PyPI,
+    # so they must be matched here and stripped before lookup.
+    PIN = re.compile(
+        r"^(?P<name>[A-Za-z0-9._-]+(?:\[[A-Za-z0-9,._-]+\])?)\s*==\s*(?P<version>[A-Za-z0-9.*+!-]+)"
+    )
+
+    def test_all_pins_use_exact_equality(self):
+        """`>=` in a requirements file makes builds non-reproducible."""
+        offenders: list[str] = []
+        for path in sorted((REPO_ROOT / "requirements").glob("*.txt")):
+            for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                line = raw.split("#", 1)[0].strip()
+                if not line or line.startswith("-"):
+                    continue
+                if "==" not in line:
+                    offenders.append(f"{path.name}:{lineno}: {line}")
+        assert not offenders, "pin these exactly, not with >=: " + ", ".join(offenders)
+
+    def test_pin_format_is_parsable(self):
+        """scripts/check_pins.py must be able to parse every non-comment line."""
+        unparsable: list[str] = []
+        for path in sorted((REPO_ROOT / "requirements").glob("*.txt")):
+            for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                line = raw.split("#", 1)[0].strip()
+                if not line or line.startswith("-"):
+                    continue
+                if not self.PIN.match(line):
+                    unparsable.append(f"{path.name}:{lineno}: {line}")
+        assert not unparsable, "unparsable requirement lines: " + ", ".join(unparsable)
+
+    def test_check_pins_script_exists(self):
+        assert (REPO_ROOT / "scripts" / "check_pins.py").is_file()
+
+    def test_ci_runs_the_pin_check(self):
+        """The check is worthless in CI unless CI actually runs it."""
+        import yaml
+
+        with (REPO_ROOT / ".github" / "workflows" / "ci-cd.yaml").open(encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+        steps = data["jobs"]["lint"]["steps"]
+        names = [s.get("name", "") for s in steps]
+        assert any("PyPI" in n for n in names), (
+            f"lint job must verify pins against PyPI, got: {names}"
+        )
 
 
 class TestPyprojectIsValid:

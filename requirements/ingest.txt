@@ -2,16 +2,21 @@
 -r base.txt
 
 # PCAP processing
-scapy==2.5.6
+scapy==2.6.1
 pyshark==0.6
 dpkt==1.9.8
 
 # NetFlow/sFlow/IPFIX
-flow-container==0.1.2
-pyflowmeter==0.1.0
+# netflow parses v1/v5/v9/IPFIX export records; pysnmp polls routers and
+# switches for interface counters that seed the flow baseline.
+netflow==0.12.2
+pysnmp==7.1.29
+pyflowmeter==0.2.4
 
 # Zeek/Suricata log parsing
-zeek-client==0.1.0
+# No Zeek client dependency on purpose: we read Zeek's own TSV/JSON log files
+# off disk, so there is no management API to talk to. An earlier pin on
+# `zeek-client` was wrong - that package is a CLI wrapper, not a parser.
 
 # Cloud
 boto3==1.35.0

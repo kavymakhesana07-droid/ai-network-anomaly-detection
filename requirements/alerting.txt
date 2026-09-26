@@ -11,7 +11,9 @@ httpx==0.27.0
 # Threat intel
 stix2==3.0.1
 taxii2-client==2.2.0
-misp-galaxy==1.0.0  # if available
+# pymisp bundles the MISP galaxy taxonomies, so it covers both the API client
+# and the galaxy data. There is no `misp-galaxy` distribution on PyPI.
+pymisp==2.5.34.4
 
 # Deduplication/correlation
 redis==5.0.8

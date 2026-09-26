@@ -41,6 +41,12 @@ jobs:
           pip install --upgrade pip
           pip install ruff mypy bandit
 
+      - name: Verify requirement pins exist on PyPI
+        # A pin for a version that was never published only fails much later,
+        # inside a Docker build, as "No matching distribution found". Checking
+        # here turns a red image build into a fast, obvious lint failure.
+        run: python scripts/check_pins.py --strict
+
       - name: Ruff lint
         run: ruff check .
 
@@ -97,6 +103,8 @@ jobs:
     # Skipped until tests/integration/ contains actual tests. Enabling the
     # Redpanda service container for an empty test dir just burns runner minutes
     # and adds a flaky dependency. Flip to true on the day integration tests land.
+    # Re-enable on the day integration tests land. Until then this only spins up
+    # a Redpanda container for an empty test directory.
     if: false
     services:
       redpanda:

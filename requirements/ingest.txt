@@ -9,9 +9,12 @@ dpkt==1.9.8
 # NetFlow/sFlow/IPFIX
 # netflow parses v1/v5/v9/IPFIX export records; pysnmp polls routers and
 # switches for interface counters that seed the flow baseline.
+#
+# pyflowmeter is NOT here on purpose. It hard-pins scapy==2.5.0, and scapy is a
+# core runtime dep for this image, so a benchmarking tool would dictate our
+# scapy version. It lives in requirements/bench.txt instead.
 netflow==0.12.2
 pysnmp==7.1.29
-pyflowmeter==0.2.4
 
 # Zeek/Suricata log parsing
 # No Zeek client dependency on purpose: we read Zeek's own TSV/JSON log files

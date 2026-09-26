@@ -45,6 +45,9 @@ great-expectations==0.18.15
 pandera==0.19.0
 
 # Visualization
-matplotlib==3.9.1
+# NOTE: there is no plain 3.9.1 on PyPI. That release was withdrawn and
+# republished as 3.9.1.post1, so "matplotlib==3.9.1" resolves to an empty
+# release and pip reports "No matching distribution found".
+matplotlib==3.9.2
 seaborn==0.13.2
 plotly==5.23.0

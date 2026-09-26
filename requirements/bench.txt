@@ -1,0 +1,17 @@
+# Offline benchmarking and feature-comparison tooling.
+#
+# Deliberately NOT part of any runtime image. This profile exists to cross-check
+# our own flow features against an independent implementation while writing
+# docs and the detection section.
+#
+# Why it is separate: pyflowmeter 0.2.4 hard-pins scapy==2.5.0. scapy is a core
+# runtime dependency (pcap ingestor, live capture, netflow), so letting a
+# benchmarking tool dictate the scapy version would hold the whole ingest image
+# back. Install this on demand:
+#
+#   pip install -r requirements/bench.txt
+
+-r base.txt
+
+# Reference CICFlowMeter V3 implementation, used to validate our feature output
+pyflowmeter==0.2.4

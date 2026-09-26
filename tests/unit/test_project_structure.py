@@ -22,6 +22,7 @@ class TestProjectStructure:
             "ingestion/pcap/main.py",
             "ingestion/pcap/Dockerfile",
             "feature_extraction/main.py",
+            "feature_extraction/models.py",
             ".github/workflows/ci-cd.yaml",
             "k8s/base/kustomization.yaml",
             "k8s/overlays/dev/kustomization.yaml",
@@ -33,18 +34,41 @@ class TestProjectStructure:
     @pytest.mark.parametrize(
         "path",
         [
+            "ingestion/pcap",
             "ingestion/live_capture",
             "ingestion/netflow",
             "ingestion/zeek",
             "ingestion/cloud_flows",
+            "feature_extraction",
             "detection/fast_path",
             "detection/deep_path",
+            "detection/model_registry",
             "alerting",
+            "output/siem",
+            "output/dashboard",
+            "output/integrations",
+            "common",
         ],
     )
-    def test_planned_module_directory_exists(self, path: str):
-        """These dirs are created up front; their implementation lands on later days."""
-        assert (REPO_ROOT / path).is_dir(), f"missing planned module dir: {path}"
+    def test_layer_directory_exists(self, path: str):
+        """Every layer from ADR-0001 must be a real, importable package.
+
+        The dirs hold only ``__init__.py`` until their implementation lands, but
+        git does not track empty directories - so the marker file is what makes
+        the declared architecture survive a clone.
+        """
+        directory = REPO_ROOT / path
+        assert directory.is_dir(), f"missing layer dir: {path}"
+        assert (directory / "__init__.py").is_file(), (
+            f"{path} needs an __init__.py or git will not track it"
+        )
+
+    def test_no_untracked_empty_source_dirs(self):
+        """Any package dir holding .py files must also be an importable package."""
+        for init in REPO_ROOT.rglob("__init__.py"):
+            if "__pycache__" in init.parts or ".venv" in init.parts:
+                continue
+            assert init.parent.is_dir()
 
 
 class TestPyprojectIsValid:

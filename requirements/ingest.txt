@@ -23,8 +23,14 @@ pysnmp==7.1.29
 
 # Cloud
 boto3==1.35.0
-google-cloud-logging==3.11.0
-azure-monitor-query==1.2.0
+google-cloud-storage==2.18.0
+google-cloud-pubsub==2.21.0
+azure-storage-blob==12.23.0
+azure-eventhub==5.11.0
+azure-identity==1.16.0
+
+# Zeek file watching
+watchfiles==1.0.3
 
 # Async I/O
 aiofiles==23.2.1

@@ -330,6 +330,110 @@ services:
     profiles:
       - ingest
 
+  # =========================================================================
+  # Live Capture Ingestor (run as job, requires CAP_NET_RAW)
+  # =========================================================================
+  live-capture-ingestor:
+    build:
+      context: .
+      dockerfile: ingestion/live_capture/Dockerfile
+    container_name: anomaly-live-capture-ingestor
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - TOPIC=raw.packets
+      - INTERFACE=eth0
+      - PROMISC=true
+      - SNAPLEN=65535
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - ./data:/data:ro
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - ingest
+
+  # =========================================================================
+  # NetFlow/sFlow/IPFIX Ingestor (run as job)
+  # =========================================================================
+  netflow-ingestor:
+    build:
+      context: .
+      dockerfile: ingestion/netflow/Dockerfile
+    container_name: anomaly-netflow-ingestor
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - TOPIC=raw.flows
+      - LISTEN_IP=0.0.0.0
+      - LISTEN_PORT=2055
+      - SFLOW_PORT=6343
+    ports:
+      - "2055:2055/udp"
+      - "6343:6343/udp"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - ingest
+
+  # =========================================================================
+  # Zeek Log Ingestor (run as job)
+  # =========================================================================
+  zeek-ingestor:
+    build:
+      context: .
+      dockerfile: ingestion/zeek/Dockerfile
+    container_name: anomaly-zeek-ingestor
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - TOPIC=raw.zeek
+      - LOG_DIR=/data/zeek_logs
+      - TAIL_FILES=true
+      - POLL_INTERVAL=1.0
+    volumes:
+      - ./data/zeek_logs:/data/zeek_logs:ro
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - ingest
+
+  # =========================================================================
+  # Cloud Flow Logs Ingestor (run as job)
+  # =========================================================================
+  cloud-flows-ingestor:
+    build:
+      context: .
+      dockerfile: ingestion/cloud_flows/Dockerfile
+    container_name: anomaly-cloud-flows-ingestor
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - TOPIC=raw.cloud_flows
+      - PROVIDER=aws
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
+      - AWS_SQS_QUEUE_URL=${AWS_SQS_QUEUE_URL:-}
+      - AWS_REGION=us-east-1
+      - GCP_GCS_BUCKET=${GCP_GCS_BUCKET:-}
+      - GCP_PUBSUB_SUBSCRIPTION=${GCP_PUBSUB_SUBSCRIPTION:-}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      - AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT:-}
+      - AZURE_STORAGE_CONTAINER=insights-logs-networksecuritygroupflowevent
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - ingest
+
 networks:
   anomaly-net:
     driver: bridge

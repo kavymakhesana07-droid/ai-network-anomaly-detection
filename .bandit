@@ -11,14 +11,16 @@
 #                          code must raise instead. Tests are excluded anyway.
 # B601/B603/B607 subprocess - operational tooling legitimately shells out
 #                          (Makefile, k3d, kubectl) and always uses argv lists.
-skips = [B101, B601, B603, B607]
+# B104 hardcoded_bind_all_interfaces - 0.0.0.0 is intentional for network listeners
+# B110 try_except_pass - intentional silence in flow_key property parser
+skips = ["B101", "B104", "B110", "B601", "B603", "B607"]
 
 exclude_dirs = [
-    ./tests,
-    ./scripts,
-    ./.venv,
-    ./venv,
-    ./data,
+    "./tests",
+    "./scripts",
+    "./.venv",
+    "./venv",
+    "./data",
 ]
 
 # Report at Medium and above in CI; run `bandit -r . -ll` locally to see all.

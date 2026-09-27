@@ -200,11 +200,11 @@ jobs:
         # Grows as each ingestor/detector is implemented (see Day plan).
         service:
           - ingestion/pcap
-        # --- Uncomment as these are built (Day 2-8) ---
-        # - ingestion/live_capture
-        # - ingestion/netflow
-        # - ingestion/zeek
-        # - ingestion/cloud_flows
+          - ingestion/live_capture
+          - ingestion/netflow
+          - ingestion/zeek
+          - ingestion/cloud_flows
+        # --- Uncomment as these are built (Day 3-8) ---
         # - feature_extraction
         # - detection/fast_path
         # - detection/deep_path

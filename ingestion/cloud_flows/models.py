@@ -313,7 +313,7 @@ class AzureFlowRecord:
     category: str
     resource_id: str
     operation_name: str
-    properties: dict
+    properties: dict[str, object]
 
     # Flattened from properties.flow (list of flows)
     rule: str | None = None
@@ -374,7 +374,7 @@ def parse_azure_flow_log_json(json_str: str) -> list[AzureFlowRecord] | None:
         return result if result else None
 
 
-def parse_azure_flow_tuple(tuple_str: str) -> tuple | None:
+def parse_azure_flow_tuple(tuple_str: str) -> tuple[int, str, str, int, int, int, str, str] | None:
     """Parse a single Azure flow tuple string."""
     match = AZURE_FLOW_TUPLE_RE.match(tuple_str)
     if not match:
@@ -480,7 +480,7 @@ def normalize_gcp(record: GCPFlowRecord) -> CloudFlowRecord:
 
 def normalize_azure(record: AzureFlowRecord) -> list[CloudFlowRecord]:
     """One Azure record can contain multiple flow tuples."""
-    results = []
+    results: list[CloudFlowRecord] = []
     if not record.flow_tuples:
         return results
 

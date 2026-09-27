@@ -109,11 +109,13 @@ def tcp_flag_names(flags: int) -> list[str]:
     return names
 
 
-def normalize_ipv4_mapped_ipv6(ip: str) -> str:
+def normalize_ipv4_mapped_ipv6(ip: str | bytes) -> str:
     """
     Convert IPv4-mapped IPv6 address (::ffff:1.2.3.4) to plain IPv4.
     NetFlow v9/IPFIX sometimes exports IPv4 this way.
     """
+    if isinstance(ip, bytes):
+        ip = ip.decode("ascii", errors="ignore")
     if ip.startswith("::ffff:"):
         return ip[7:]
     return ip

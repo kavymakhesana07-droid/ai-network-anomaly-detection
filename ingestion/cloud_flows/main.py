@@ -134,7 +134,7 @@ class CloudFlowIngestor:
     async def _run_aws(self) -> None:
         """Poll SQS for S3 object notifications, download and process flow log files."""
         try:
-            import boto3
+            import boto3  # type: ignore[import-untyped]
         except ImportError:
             logger.exception("boto3 not installed - cannot run AWS ingestor")
             return
@@ -239,7 +239,7 @@ class CloudFlowIngestor:
     async def _run_gcp(self) -> None:
         """Pull from Pub/Sub subscription for GCS object notifications."""
         try:
-            from google.cloud import pubsub_v1, storage
+            from google.cloud import pubsub_v1, storage  # type: ignore[import-untyped]
         except ImportError:
             logger.exception("google-cloud-pubsub or google-cloud-storage not installed")
             return
@@ -315,8 +315,8 @@ class CloudFlowIngestor:
     async def _run_azure(self) -> None:
         """Poll Azure Blob Storage or Event Hub for NSG flow logs."""
         try:
-            from azure.eventhub.aio import EventHubConsumerClient
-            from azure.storage.blob import BlobServiceClient
+            from azure.eventhub.aio import EventHubConsumerClient  # type: ignore[import-not-found]
+            from azure.storage.blob import BlobServiceClient  # type: ignore[import-not-found]
         except ImportError:
             logger.exception("azure-storage-blob or azure-eventhub not installed")
             return

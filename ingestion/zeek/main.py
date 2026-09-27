@@ -9,12 +9,13 @@ import signal
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 
 import structlog
 from aiokafka import AIOKafkaProducer
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from watchfiles import watch
+from watchfiles import watch  # type: ignore[import-not-found]
 
 from .models import (
     ZeekLogType,
@@ -57,9 +58,9 @@ class FileState:
     """Track position and parser state for a single log file."""
 
     path: Path
-    file_handle: object | None = None
+    file_handle: IO[str] | None = None
     position: int = 0
-    fields: list[str] = None
+    fields: list[str] | None = None
     log_type: ZeekLogType = ZeekLogType.UNKNOWN
     lines_processed: int = 0
     is_gzipped: bool = False

@@ -46,7 +46,7 @@ class ZeekConfig:
     poll_interval: float = 1.0
     # Field selection
     include_types: set[ZeekLogType] | None = None  # None = all
-    exclude_fields: set[str] = frozenset()
+    exclude_fields: frozenset[str] = frozenset()
 
 
 # Common field names across Zeek log types
@@ -201,7 +201,7 @@ class ZeekRecord:
 
     log_type: ZeekLogType
     timestamp: float
-    fields: dict[str, str]
+    fields: dict[str, str | int | float | bool | None | list[str]]
     raw_line: str
     file_path: str
     line_number: int
@@ -284,7 +284,9 @@ def parse_zeek_timestamp(ts_str: str) -> float:
         return 0.0
 
 
-def normalize_zeek_value(value: str, field_name: str) -> str | int | float | bool | None:
+def normalize_zeek_value(
+    value: str, field_name: str
+) -> str | int | float | bool | None | list[str]:
     """
     Convert Zeek's string representation to native Python types.
     Zeek uses: - for empty, T/F for bool, comma-separated for sets/vectors.
@@ -313,9 +315,16 @@ def normalize_zeek_value(value: str, field_name: str) -> str | int | float | boo
 def normalize_record(record: ZeekRecord) -> ZeekRecord:
     """Return a new record with normalized field values."""
     normalized = {k: normalize_zeek_value(v, k) for k, v in record.fields.items()}
+    ts_val = normalized.get("ts")
+    if isinstance(ts_val, (int, float)):
+        ts_float = float(ts_val)
+    elif isinstance(ts_val, str):
+        ts_float = parse_zeek_timestamp(ts_val)
+    else:
+        ts_float = 0.0
     return ZeekRecord(
         log_type=record.log_type,
-        timestamp=parse_zeek_timestamp(normalized.get("ts", 0)),
+        timestamp=ts_float,
         fields=normalized,
         raw_line=record.raw_line,
         file_path=record.file_path,

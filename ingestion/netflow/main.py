@@ -59,7 +59,7 @@ class NetFlowIngestor:
     flows_failed: int = 0
     packets_received: int = 0
     packets_malformed: int = 0
-    _checkpoint_file: Path = None
+    _checkpoint_file: Path | None = None
     _last_checkpoint: int = 0
 
     def __post_init__(self) -> None:
@@ -355,11 +355,11 @@ class _NetFlowProtocol(asyncio.DatagramProtocol):
             if not val:
                 return 0
             if len(val) == 1:
-                return val[0]
+                return int(val[0])
             elif len(val) == 2:
-                return struct.unpack("!H", val)[0]
+                return int(struct.unpack("!H", val)[0])
             elif len(val) == 4:
-                return struct.unpack("!I", val)[0]
+                return int(struct.unpack("!I", val)[0])
             return 0
 
         flow_start = get_int(21) / 1000.0 if 21 in fields else 0

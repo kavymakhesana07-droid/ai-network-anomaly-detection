@@ -54,7 +54,7 @@ def _interface_to_index(iface: str) -> int:
         res = fcntl.ioctl(socket.socket(socket.AF_INET, socket.SOCK_DGRAM), _SIOCGIFINDEX, ifr)
     except OSError as exc:
         raise ValueError("interface not found: " + iface) from exc
-    return struct.unpack("16si", res)[1]
+    return struct.unpack("16si", res)[1]  # type: ignore[no-any-return]
 
 
 def create_raw_socket(config: LiveCaptureConfig) -> socket.socket:

@@ -217,7 +217,7 @@ class ZeekIngestor:
                         state.position = state.file_handle.tell()
                         state.lines_processed += 1
 
-                        parsed = parse_zeek_line(line, state.fields or [])  # type: ignore[arg-type]
+                        parsed = parse_zeek_line(line, state.fields or [])
                         if parsed is None:
                             continue
 

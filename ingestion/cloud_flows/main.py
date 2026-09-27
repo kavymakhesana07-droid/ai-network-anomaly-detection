@@ -134,7 +134,7 @@ class CloudFlowIngestor:
     async def _run_aws(self) -> None:
         """Poll SQS for S3 object notifications, download and process flow log files."""
         try:
-            import boto3  # type: ignore[import-untyped]
+            import boto3  # type: ignore[import-not-found]
         except ImportError:
             logger.exception("boto3 not installed - cannot run AWS ingestor")
             return
@@ -283,7 +283,7 @@ class CloudFlowIngestor:
                 await self._flush_batch(batch)
 
     async def _process_gcp_file(
-        self, storage_client, bucket_name: str, object_name: str, batch: list
+        self, storage_client, bucket_name: str, object_name: str, batch: list[CloudFlowRecord]
     ) -> None:
         """Download and parse a single GCP flow log file from GCS."""
         try:
@@ -370,7 +370,7 @@ class CloudFlowIngestor:
             if batch:
                 await self._flush_batch(batch)
 
-    async def _process_azure_event(self, json_str: str, batch: list) -> None:
+    async def _process_azure_event(self, json_str: str, batch: list[CloudFlowRecord]) -> None:
         """Process a single Azure NSG flow log event from Event Hub."""
         records = parse_azure_flow_log_json(json_str)
         if records:
@@ -379,7 +379,9 @@ class CloudFlowIngestor:
                     batch.append(normalized)
                     self.files_processed += 1
 
-    async def _process_azure_blob(self, container, blob_name: str, batch: list) -> None:
+    async def _process_azure_blob(
+        self, container, blob_name: str, batch: list[CloudFlowRecord]
+    ) -> None:
         """Download and parse an Azure flow log blob."""
         try:
             blob_client = container.get_blob_client(blob_name)

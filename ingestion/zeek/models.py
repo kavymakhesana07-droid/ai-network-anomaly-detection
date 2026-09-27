@@ -319,7 +319,9 @@ def normalize_zeek_value(
 
 def normalize_record(record: ZeekRecord) -> ZeekRecord:
     """Return a new record with normalized field values."""
-    normalized = {k: normalize_zeek_value(v, k) for k, v in record.fields.items()}
+    # Raw fields from parsing are always strings; mypy doesn't know this.
+    raw_fields: dict[str, str] = record.fields  # type: ignore[assignment]
+    normalized = {k: normalize_zeek_value(v, k) for k, v in raw_fields.items()}
     ts_val = normalized.get("ts")
     if isinstance(ts_val, (int, float)):
         ts_float = float(ts_val)

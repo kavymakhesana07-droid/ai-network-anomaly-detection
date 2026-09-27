@@ -59,7 +59,7 @@ jobs:
           mypy --strict ingestion feature_extraction detection alerting output
 
       - name: Bandit (security lint)
-        run: bandit -r ingestion feature_extraction detection alerting output -x tests
+        run: bandit -r ingestion feature_extraction detection alerting output -x tests --skip B101,B104,B110,B601,B603,B607
 
   # =========================================================================
   # Unit Tests

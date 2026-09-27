@@ -82,7 +82,7 @@ def main():
 
             for mod in ("aiokafka", "scapy", "structlog"):
                 if importlib.util.find_spec(mod) is None:
-                    raise ImportError(mod)
+                    raise ImportError("missing: " + mod)  # noqa: TRY301 - simple check
         except ImportError:
             print("Installing dependencies...")
             subprocess.run(

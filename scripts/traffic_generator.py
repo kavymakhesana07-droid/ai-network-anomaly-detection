@@ -9,13 +9,17 @@ Usage:
   python traffic_generator.py kafka --topic raw.packets --rate 1000
 """
 
-# ruff: noqa: S311,S311,S311,S311,S311 - random used for traffic generation, not crypto
+# ruff: noqa: S311 - random used for traffic generation, not crypto
 # ruff: noqa: S104 - 0.0.0.0 used as fallback IP, not bind address
 # ruff: noqa: E731 - lambda in struct.unpack format string
 # ruff: noqa: TRY003 - RuntimeError with message is appropriate for missing deps
+# ruff: noqa: UP031 - percent format in struct.unpack is standard idiom
+# ruff: noqa: F401 - scapy imports for availability check only
+# ruff: noqa: ARG001 - timestamp reserved for future use
 
 import argparse
 import asyncio
+import json
 import random
 import struct
 import time
@@ -377,9 +381,6 @@ async def inject_kafka(
     finally:
         await producer.stop()
         print(f"Total sent: {sent}")
-
-
-import json
 
 
 def main():

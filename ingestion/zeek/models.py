@@ -210,18 +210,23 @@ class ZeekRecord:
     def flow_key(self) -> str | None:
         """Extract flow key if connection fields present."""
         try:
-            return (
-                f"{self.fields['id.orig_h']}:{self.fields['id.orig_p']}"
-                f"->{self.fields['id.resp_h']}:{self.fields['id.resp_p']}"
-                f"/{self.fields['proto']}"
-            )
+            orig_h = self.fields["id.orig_h"]
+            orig_p = self.fields["id.orig_p"]
+            resp_h = self.fields["id.resp_h"]
+            resp_p = self.fields["id.resp_p"]
+            proto = self.fields["proto"]
+            # Ensure all are strings (not lists)
+            if all(isinstance(v, str) for v in (orig_h, orig_p, resp_h, resp_p, proto)):
+                return f"{orig_h}:{orig_p}->{resp_h}:{resp_p}/{proto}"
         except KeyError:
-            return None
+            pass
+        return None
 
     @property
     def uid(self) -> str | None:
         """Connection UID if present."""
-        return self.fields.get("uid")
+        val = self.fields.get("uid")
+        return val if isinstance(val, str) else None
 
 
 def detect_log_type(file_path: str, header_line: str) -> ZeekLogType:

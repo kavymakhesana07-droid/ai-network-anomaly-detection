@@ -78,7 +78,7 @@ class CloudFlowIngestor:
     records_sent: int = 0
     records_failed: int = 0
     files_processed: int = 0
-    _checkpoint_file: Path = None
+    _checkpoint_file: Path | None = None
     _last_checkpoint: float = 0
 
     def __post_init__(self):
@@ -147,7 +147,7 @@ class CloudFlowIngestor:
             logger.exception("AWS_SQS_QUEUE_URL not configured")
             return
 
-        batch = []
+        batch: list[CloudFlowRecord] = []
 
         while self.running:
             try:
@@ -210,7 +210,9 @@ class CloudFlowIngestor:
         if batch:
             await self._flush_batch(batch)
 
-    async def _process_aws_file(self, s3, bucket: str, key: str, batch: list) -> None:
+    async def _process_aws_file(
+        self, s3, bucket: str, key: str, batch: list[CloudFlowRecord]
+    ) -> None:
         """Download and parse a single flow log file from S3."""
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
@@ -250,7 +252,7 @@ class CloudFlowIngestor:
         )
 
         storage_client = storage.Client()
-        batch = []
+        batch: list[CloudFlowRecord] = []
 
         def callback(message):
             try:
@@ -321,7 +323,7 @@ class CloudFlowIngestor:
             logger.exception("azure-storage-blob or azure-eventhub not installed")
             return
 
-        batch = []
+        batch: list[CloudFlowRecord] = []
 
         if self.settings.azure_event_hub_namespace:
             # Event Hub consumer

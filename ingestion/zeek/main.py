@@ -217,14 +217,14 @@ class ZeekIngestor:
                         state.position = state.file_handle.tell()
                         state.lines_processed += 1
 
-                        parsed = parse_zeek_line(line, state.fields)
+                        parsed = parse_zeek_line(line, state.fields or [])  # type: ignore[arg-type]
                         if parsed is None:
                             continue
 
                         record = ZeekRecord(
                             log_type=state.log_type,
                             timestamp=0.0,  # Will be set by normalize
-                            fields=parsed,
+                            fields=parsed,  # type: ignore[arg-type]
                             raw_line=line.rstrip("\n"),
                             file_path=str(path),
                             line_number=state.lines_processed,

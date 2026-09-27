@@ -5,6 +5,7 @@ Production-grade: async I/O, backpressure, checkpointing, metrics.
 
 import asyncio
 import signal
+import socket
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,7 +63,7 @@ class LiveCaptureIngestor:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.producer: AIOKafkaProducer | None = None
-        self.sock = None
+        self.sock: socket.socket | None = None
         self.running = False
         self.packets_sent = 0
         self.packets_failed = 0
@@ -130,7 +131,7 @@ class LiveCaptureIngestor:
         """Main capture loop using asyncio sock_recv."""
         loop = asyncio.get_running_loop()
         packet_count = self._load_checkpoint()
-        batch = []
+        batch: list[PacketRecord] = []
         batch_size = 100  # Flush every N packets
 
         logger.info(
@@ -141,6 +142,7 @@ class LiveCaptureIngestor:
             while self.running:
                 try:
                     # recv with timeout via asyncio
+                    assert self.sock is not None, "Socket not initialized"
                     data = await asyncio.wait_for(
                         loop.sock_recv(self.sock, self.settings.snaplen),
                         timeout=self.settings.timeout_ms / 1000

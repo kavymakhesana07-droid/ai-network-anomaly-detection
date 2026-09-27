@@ -117,7 +117,7 @@ class NetFlowIngestor:
         )
 
     def _load_templates(self) -> None:
-        if not self._checkpoint_file.exists():
+        if self._checkpoint_file is None or not self._checkpoint_file.exists():
             return
         try:
             import json
@@ -135,6 +135,8 @@ class NetFlowIngestor:
             logger.warning("Failed to load templates", error=str(exc))
 
     def _save_templates(self) -> None:
+        if self._checkpoint_file is None:
+            return
         try:
             import json
 

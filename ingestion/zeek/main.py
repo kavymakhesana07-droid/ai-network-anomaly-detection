@@ -292,7 +292,7 @@ async def main() -> None:
         ]
     )
 
-    settings = Settings()  # type: ignore[call-arg]
+    settings = Settings()
     ingestor = ZeekIngestor(settings)
 
     loop = asyncio.get_running_loop()

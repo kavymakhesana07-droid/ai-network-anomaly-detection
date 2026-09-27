@@ -604,7 +604,7 @@ async def main() -> None:
         ]
     )
 
-    settings = Settings()  # type: ignore[call-arg]
+    settings = Settings()
     ingestor = NetFlowIngestor(settings)
 
     loop = asyncio.get_running_loop()

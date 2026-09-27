@@ -431,7 +431,7 @@ async def main() -> None:
         ]
     )
 
-    settings = Settings()  # type: ignore[call-arg]
+    settings = Settings()
     ingestor = CloudFlowIngestor(settings)
 
     loop = asyncio.get_running_loop()

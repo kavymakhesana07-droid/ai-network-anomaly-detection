@@ -1,7 +1,7 @@
 # Core dependencies shared across all services
 pydantic==2.8.2
 pydantic-settings==2.4.0
-python-dotenv==1.0.1
+python-dotenv==1.2.3
 # pyyaml 6.0.3 (not 6.0.1): modern pysigma, pulled in by sigma-cli, requires
 # pyyaml>=6.0.3.
 pyyaml==6.0.3

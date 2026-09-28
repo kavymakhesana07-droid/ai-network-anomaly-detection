@@ -79,7 +79,7 @@ detect_deep = [
 alerting = [
     "ipwhois>=1.2.0",
     "python-whois>=0.9.0",
-    "dnspython>=2.6.1",
+    "dnspython>=2.8.0",
     "requests>=2.32.3",
     "stix2>=3.0.1",
 ]

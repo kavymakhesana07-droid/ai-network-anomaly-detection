@@ -6,7 +6,7 @@
 # 1.3.0 relaxed that to a plain 'dnspython'.
 ipwhois==1.3.0
 python-whois==0.9.0
-dnspython==2.6.1
+dnspython==2.8.0
 # requests 2.34.2 is the floor set by pymisp, which requires requests>=2.34.2.
 requests==2.34.2
 httpx==0.27.0

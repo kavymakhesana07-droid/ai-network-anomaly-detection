@@ -256,7 +256,7 @@ def normalize_features(vector: list[float], means: list[float], stds: list[float
 
 
 def isolation_forest_score(
-    vector: list[float], trees: list[dict], n_estimators: int, max_samples: int
+    vector: list[float], trees: list[dict[str, object]], n_estimators: int, max_samples: int
 ) -> float:
     """
     Compute Isolation Forest anomaly score (pure Python fallback).
@@ -278,21 +278,23 @@ def isolation_forest_score(
     return score
 
 
-def _path_length(vector: list[float], tree: dict, depth: int) -> float:
+def _path_length(vector: list[float], tree: dict[str, object], depth: int) -> float:
     """Calculate path length in a single isolation tree."""
     if "leaf" in tree:
-        return depth + tree.get("size", 1) * 0.5
+        return depth + float(tree.get("size", 1)) * 0.5
 
-    split_idx = tree.get("split_idx", 0)
-    split_val = tree.get("split_val", 0.0)
+    split_idx = int(tree.get("split_idx", 0))
+    split_val = float(tree.get("split_val", 0.0))
 
     if split_idx >= len(vector):
-        return depth
+        return float(depth)
 
+    left = tree.get("left")
+    right = tree.get("right")
     if vector[split_idx] < split_val:
-        return _path_length(vector, tree.get("left", {}), depth + 1)
+        return _path_length(vector, left if isinstance(left, dict) else {}, depth + 1)
     else:
-        return _path_length(vector, tree.get("right", {}), depth + 1)
+        return _path_length(vector, right if isinstance(right, dict) else {}, depth + 1)
 
 
 def load_normalization_params(model_path: str) -> tuple[list[float], list[float]] | None:
@@ -311,7 +313,7 @@ def load_normalization_params(model_path: str) -> tuple[list[float], list[float]
         return None
 
 
-def load_onnx_session(model_path: str) -> None:  # noqa: ARG001 - placeholder signature
+def load_onnx_session(model_path: str) -> object | None:  # noqa: ARG001 - placeholder signature
     """Load ONNX Runtime inference session (placeholder for actual implementation)."""
     # Actual implementation would use onnxruntime.InferenceSession
     # This is a placeholder for type checking

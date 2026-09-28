@@ -10,8 +10,10 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-import redis.asyncio as redis
+# Type ignores for libs without stubs
+import redis.asyncio as redis  # type: ignore[import-not-found]
 import structlog
+import yaml  # type: ignore[import-not-found]
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -75,11 +77,11 @@ class FastPathDetector:
     onnx_session: object | None = None
     normalization_means: list[float] | None = None
     normalization_stds: list[float] | None = None
-    isolation_trees: list[dict] = None
+    isolation_trees: list[dict[str, object]] = None  # type: ignore[assignment]
     model_version: str = "1.0.0"
 
     # Sigma rules
-    sigma_rules: list[dict] = None
+    sigma_rules: list[dict[str, object]] = None  # type: ignore[assignment]
 
     # Metrics
     flows_processed: int = 0
@@ -184,7 +186,6 @@ class FastPathDetector:
 
     async def _load_sigma_rules(self) -> None:
         """Load Sigma rules from directory."""
-        import yaml
 
         rules_dir = Path(self.settings.sigma_rules_path)
         if not rules_dir.exists():
@@ -360,6 +361,10 @@ class FastPathDetector:
         """Main processing loop."""
         self.running = True
         logger.info("Fast path detector started")
+
+        if self.consumer is None:
+            logger.error("Consumer not initialized")
+            return
 
         try:
             async for msg in self.consumer:

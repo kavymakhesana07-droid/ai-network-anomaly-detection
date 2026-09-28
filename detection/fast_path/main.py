@@ -10,10 +10,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-# Type ignores for libs without stubs
-import redis.asyncio as redis  # type: ignore[import-not-found]
+import redis.asyncio as redis
 import structlog
-import yaml  # type: ignore[import-not-found]
+import yaml
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -197,7 +196,7 @@ class FastPathDetector:
             try:
                 rule = yaml.safe_load(rule_file.read_text())
                 if rule and "detection" in rule:
-                    self.sigma_rules.append(rule)
+                    self.sigma_rules.append(rule)  # type: ignore[arg-type]
                     count += 1
             except Exception as exc:
                 logger.warning("Failed to load rule", file=str(rule_file), error=str(exc))
@@ -209,15 +208,20 @@ class FastPathDetector:
     ) -> tuple[bool, str | None, str | None, str | None]:
         """Evaluate Sigma rules against flow features (simplified)."""
         for rule in self.sigma_rules:
-            detection = rule.get("detection", {})
+            detection: dict[str, object] = rule.get("detection", {})
             # Simplified: check if any condition matches
             # Real implementation would use sigma's condition evaluation
             if self._match_detection(features, detection):
                 self.sigma_matches += 1
-                return True, rule.get("id"), rule.get("title"), rule.get("level", "medium")
+                return (
+                    True,
+                    str(rule.get("id", "")) or None,
+                    str(rule.get("title", "")) or None,
+                    str(rule.get("level", "medium")) or None,
+                )
         return False, None, None, None
 
-    def _match_detection(self, features: FlowFeatures, detection: dict) -> bool:
+    def _match_detection(self, features: FlowFeatures, detection: dict[str, object]) -> bool:
         """Check if flow matches a Sigma detection condition (simplified)."""
         # This is a placeholder - real implementation uses sigma's condition evaluator
         # For now, just check a few common indicators
@@ -425,7 +429,7 @@ async def main() -> None:
         ]
     )
 
-    settings = Settings()  # type: ignore[call-arg]
+    settings = Settings()
     detector = FastPathDetector(settings)
 
     loop = asyncio.get_running_loop()

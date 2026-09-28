@@ -281,10 +281,13 @@ def isolation_forest_score(
 def _path_length(vector: list[float], tree: dict[str, object], depth: int) -> float:
     """Calculate path length in a single isolation tree."""
     if "leaf" in tree:
-        return depth + float(tree.get("size", 1)) * 0.5
+        size_val = tree.get("size", 1)
+        return depth + (float(size_val) if isinstance(size_val, (int, float)) else 1.0) * 0.5
 
-    split_idx = int(tree.get("split_idx", 0))
-    split_val = float(tree.get("split_val", 0.0))
+    split_idx_raw = tree.get("split_idx", 0)
+    split_val_raw = tree.get("split_val", 0.0)
+    split_idx = int(split_idx_raw) if isinstance(split_idx_raw, (int, float)) else 0
+    split_val = float(split_val_raw) if isinstance(split_val_raw, (int, float)) else 0.0
 
     if split_idx >= len(vector):
         return float(depth)

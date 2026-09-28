@@ -27,7 +27,7 @@ google-cloud-storage==2.18.0
 google-cloud-pubsub==2.21.0
 azure-storage-blob==12.23.0
 azure-eventhub==5.11.0
-azure-identity==1.16.0
+azure-identity==1.25.3
 
 # Zeek file watching
 watchfiles==1.0.3

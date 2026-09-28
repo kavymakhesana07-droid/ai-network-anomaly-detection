@@ -196,7 +196,7 @@ class FastPathDetector:
             try:
                 rule = yaml.safe_load(rule_file.read_text())
                 if rule and "detection" in rule:
-                    self.sigma_rules.append(rule)  # type: ignore[arg-type]
+                    self.sigma_rules.append(rule)
                     count += 1
             except Exception as exc:
                 logger.warning("Failed to load rule", file=str(rule_file), error=str(exc))
@@ -208,7 +208,9 @@ class FastPathDetector:
     ) -> tuple[bool, str | None, str | None, str | None]:
         """Evaluate Sigma rules against flow features (simplified)."""
         for rule in self.sigma_rules:
-            detection: dict[str, object] = rule.get("detection", {})
+            detection = rule.get("detection", {})
+            if not isinstance(detection, dict):
+                detection = {}
             # Simplified: check if any condition matches
             # Real implementation would use sigma's condition evaluation
             if self._match_detection(features, detection):
@@ -259,7 +261,7 @@ class FastPathDetector:
         inference_ms = (time.perf_counter() - start) * 1000
         return score, inference_ms
 
-    async def process_flow(self, flow_data: dict) -> DetectionResult | None:
+    async def process_flow(self, flow_data: dict[str, object]) -> DetectionResult | None:
         """Process a single flow and return detection result."""
         try:
             # Parse features

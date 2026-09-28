@@ -196,7 +196,7 @@ class FastPathDetector:
             try:
                 rule = yaml.safe_load(rule_file.read_text())
                 if rule and "detection" in rule:
-                    self.sigma_rules.append(rule)  # type: ignore[arg-type]
+                    self.sigma_rules.append(rule)
                     count += 1
             except Exception as exc:
                 logger.warning("Failed to load rule", file=str(rule_file), error=str(exc))

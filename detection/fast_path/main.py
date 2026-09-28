@@ -10,6 +10,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+# Type ignores for libs without stubs - handled by mypy config
 import redis.asyncio as redis
 import structlog
 import yaml
@@ -185,7 +186,6 @@ class FastPathDetector:
 
     async def _load_sigma_rules(self) -> None:
         """Load Sigma rules from directory."""
-
         rules_dir = Path(self.settings.sigma_rules_path)
         if not rules_dir.exists():
             logger.warning("Sigma rules directory not found", path=str(rules_dir))
@@ -196,7 +196,7 @@ class FastPathDetector:
             try:
                 rule = yaml.safe_load(rule_file.read_text())
                 if rule and "detection" in rule:
-                    self.sigma_rules.append(rule)
+                    self.sigma_rules.append(rule)  # type: ignore[arg-type]
                     count += 1
             except Exception as exc:
                 logger.warning("Failed to load rule", file=str(rule_file), error=str(exc))
@@ -264,66 +264,78 @@ class FastPathDetector:
     async def process_flow(self, flow_data: dict[str, object]) -> DetectionResult | None:
         """Process a single flow and return detection result."""
         try:
-            # Parse features
+            # Parse features with explicit type conversion
+            def get_str(key: str, default: str = "") -> str:
+                val = flow_data.get(key, default)
+                return str(val) if val is not None else default
+
+            def get_int(key: str, default: int = 0) -> int:
+                val = flow_data.get(key, default)
+                return int(val) if isinstance(val, (int, float)) else default
+
+            def get_float(key: str, default: float = 0.0) -> float:
+                val = flow_data.get(key, default)
+                return float(val) if isinstance(val, (int, float)) else default
+
             features = FlowFeatures(
-                flow_key=flow_data.get("flow_key", ""),
-                src_ip=flow_data.get("src_ip", ""),
-                dst_ip=flow_data.get("dst_ip", ""),
-                src_port=flow_data.get("src_port", 0),
-                dst_port=flow_data.get("dst_port", 0),
-                protocol=flow_data.get("protocol", 0),
-                timestamp=flow_data.get("timestamp", time.time()),
-                duration=flow_data.get("duration", 0.0),
-                fwd_packets=flow_data.get("fwd_packets", 0),
-                bwd_packets=flow_data.get("bwd_packets", 0),
-                fwd_bytes=flow_data.get("fwd_bytes", 0),
-                bwd_bytes=flow_data.get("bwd_bytes", 0),
-                fwd_payload_bytes=flow_data.get("fwd_payload_bytes", 0),
-                bwd_payload_bytes=flow_data.get("bwd_payload_bytes", 0),
-                fwd_packet_len_max=flow_data.get("fwd_packet_len_max", 0.0),
-                fwd_packet_len_min=flow_data.get("fwd_packet_len_min", 0.0),
-                fwd_packet_len_mean=flow_data.get("fwd_packet_len_mean", 0.0),
-                fwd_packet_len_std=flow_data.get("fwd_packet_len_std", 0.0),
-                bwd_packet_len_max=flow_data.get("bwd_packet_len_max", 0.0),
-                bwd_packet_len_min=flow_data.get("bwd_packet_len_min", 0.0),
-                bwd_packet_len_mean=flow_data.get("bwd_packet_len_mean", 0.0),
-                bwd_packet_len_std=flow_data.get("bwd_packet_len_std", 0.0),
-                fwd_iat_total=flow_data.get("fwd_iat_total", 0.0),
-                fwd_iat_mean=flow_data.get("fwd_iat_mean", 0.0),
-                fwd_iat_std=flow_data.get("fwd_iat_std", 0.0),
-                fwd_iat_max=flow_data.get("fwd_iat_max", 0.0),
-                fwd_iat_min=flow_data.get("fwd_iat_min", 0.0),
-                bwd_iat_total=flow_data.get("bwd_iat_total", 0.0),
-                bwd_iat_mean=flow_data.get("bwd_iat_mean", 0.0),
-                bwd_iat_std=flow_data.get("bwd_iat_std", 0.0),
-                bwd_iat_max=flow_data.get("bwd_iat_max", 0.0),
-                bwd_iat_min=flow_data.get("bwd_iat_min", 0.0),
-                fin_flag_count=flow_data.get("fin_flag_count", 0),
-                syn_flag_count=flow_data.get("syn_flag_count", 0),
-                rst_flag_count=flow_data.get("rst_flag_count", 0),
-                psh_flag_count=flow_data.get("psh_flag_count", 0),
-                ack_flag_count=flow_data.get("ack_flag_count", 0),
-                urg_flag_count=flow_data.get("urg_flag_count", 0),
-                cwr_flag_count=flow_data.get("cwr_flag_count", 0),
-                ece_flag_count=flow_data.get("ece_flag_count", 0),
-                fwd_packets_per_sec=flow_data.get("fwd_packets_per_sec", 0.0),
-                bwd_packets_per_sec=flow_data.get("bwd_packets_per_sec", 0.0),
-                fwd_bytes_per_sec=flow_data.get("fwd_bytes_per_sec", 0.0),
-                bwd_bytes_per_sec=flow_data.get("bwd_bytes_per_sec", 0.0),
-                subflow_fwd_packets=flow_data.get("subflow_fwd_packets", 0),
-                subflow_fwd_bytes=flow_data.get("subflow_fwd_bytes", 0),
-                subflow_bwd_packets=flow_data.get("subflow_bwd_packets", 0),
-                subflow_bwd_bytes=flow_data.get("subflow_bwd_bytes", 0),
-                init_fwd_win_bytes=flow_data.get("init_fwd_win_bytes", 0),
-                init_bwd_win_bytes=flow_data.get("init_bwd_win_bytes", 0),
-                active_mean=flow_data.get("active_mean", 0.0),
-                active_std=flow_data.get("active_std", 0.0),
-                active_max=flow_data.get("active_max", 0.0),
-                active_min=flow_data.get("active_min", 0.0),
-                idle_mean=flow_data.get("idle_mean", 0.0),
-                idle_std=flow_data.get("idle_std", 0.0),
-                idle_max=flow_data.get("idle_max", 0.0),
-                idle_min=flow_data.get("idle_min", 0.0),
+                flow_key=get_str("flow_key"),
+                src_ip=get_str("src_ip"),
+                dst_ip=get_str("dst_ip"),
+                src_port=get_int("src_port"),
+                dst_port=get_int("dst_port"),
+                protocol=get_int("protocol"),
+                timestamp=get_float("timestamp") or time.time(),
+                duration=get_float("duration"),
+                fwd_packets=get_int("fwd_packets"),
+                bwd_packets=get_int("bwd_packets"),
+                fwd_bytes=get_int("fwd_bytes"),
+                bwd_bytes=get_int("bwd_bytes"),
+                fwd_payload_bytes=get_int("fwd_payload_bytes"),
+                bwd_payload_bytes=get_int("bwd_payload_bytes"),
+                fwd_packet_len_max=get_float("fwd_packet_len_max"),
+                fwd_packet_len_min=get_float("fwd_packet_len_min"),
+                fwd_packet_len_mean=get_float("fwd_packet_len_mean"),
+                fwd_packet_len_std=get_float("fwd_packet_len_std"),
+                bwd_packet_len_max=get_float("bwd_packet_len_max"),
+                bwd_packet_len_min=get_float("bwd_packet_len_min"),
+                bwd_packet_len_mean=get_float("bwd_packet_len_mean"),
+                bwd_packet_len_std=get_float("bwd_packet_len_std"),
+                fwd_iat_total=get_float("fwd_iat_total"),
+                fwd_iat_mean=get_float("fwd_iat_mean"),
+                fwd_iat_std=get_float("fwd_iat_std"),
+                fwd_iat_max=get_float("fwd_iat_max"),
+                fwd_iat_min=get_float("fwd_iat_min"),
+                bwd_iat_total=get_float("bwd_iat_total"),
+                bwd_iat_mean=get_float("bwd_iat_mean"),
+                bwd_iat_std=get_float("bwd_iat_std"),
+                bwd_iat_max=get_float("bwd_iat_max"),
+                bwd_iat_min=get_float("bwd_iat_min"),
+                fin_flag_count=get_int("fin_flag_count"),
+                syn_flag_count=get_int("syn_flag_count"),
+                rst_flag_count=get_int("rst_flag_count"),
+                psh_flag_count=get_int("psh_flag_count"),
+                ack_flag_count=get_int("ack_flag_count"),
+                urg_flag_count=get_int("urg_flag_count"),
+                cwr_flag_count=get_int("cwr_flag_count"),
+                ece_flag_count=get_int("ece_flag_count"),
+                fwd_packets_per_sec=get_float("fwd_packets_per_sec"),
+                bwd_packets_per_sec=get_float("bwd_packets_per_sec"),
+                fwd_bytes_per_sec=get_float("fwd_bytes_per_sec"),
+                bwd_bytes_per_sec=get_float("bwd_bytes_per_sec"),
+                subflow_fwd_packets=get_int("subflow_fwd_packets"),
+                subflow_fwd_bytes=get_int("subflow_fwd_bytes"),
+                subflow_bwd_packets=get_int("subflow_bwd_packets"),
+                subflow_bwd_bytes=get_int("subflow_bwd_bytes"),
+                init_fwd_win_bytes=get_int("init_fwd_win_bytes"),
+                init_bwd_win_bytes=get_int("init_bwd_win_bytes"),
+                active_mean=get_float("active_mean"),
+                active_std=get_float("active_std"),
+                active_max=get_float("active_max"),
+                active_min=get_float("active_min"),
+                idle_mean=get_float("idle_mean"),
+                idle_std=get_float("idle_std"),
+                idle_max=get_float("idle_max"),
+                idle_min=get_float("idle_min"),
             )
 
             # ML inference
@@ -360,8 +372,8 @@ class FastPathDetector:
         except Exception as exc:
             logger.exception("Flow processing failed", error=str(exc))
             return None
-
-        return result
+        else:
+            return result
 
     async def run(self) -> None:
         """Main processing loop."""

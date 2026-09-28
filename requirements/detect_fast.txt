@@ -3,7 +3,7 @@
 
 # Lightweight ML
 scikit-learn==1.5.0
-joblib==1.4.2
+joblib==1.6.0
 numpy==1.26.4
 
 # ONNX Runtime for fast inference

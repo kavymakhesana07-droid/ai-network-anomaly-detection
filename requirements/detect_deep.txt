@@ -1,8 +1,29 @@
-# Deep path detection (batch/streaming ML)
+# Deep path detection - SHIPPED image profile (LSTM autoencoder serving + training)
+#
+# This is deliberately lean: it installs only what detection/deep_path imports.
+# Pulling the full ml.txt here (CUDA torch + onnxruntime-gpu + ray + xgboost +
+# great-expectations + ...) exhausted the CI runner disk (Errno 28, Day 4).
+# The full local-training stack lives in ml.txt; future serving/tuning deps
+# (tritonclient, torchserve, transformers, optuna, ray, ...) move there too
+# and join this image on the day they are actually imported.
 -r base.txt
--r ml.txt
 
-# Streaming
+# Deep learning (PyPI torch bundles CUDA; CPU-only fallback happens at runtime)
+torch==2.4.0
+lightning==2.3.3
+
+# ONNX export (train) + runtime (serve)
+onnx==1.16.1
+onnxruntime==1.19.2
+
+# Tabular
+numpy==1.26.4
+pandas==2.2.2
+
+# Experiment tracking (best-effort; training continues without a server)
+mlflow==2.15.1
+
+# Batch training input (Spark local mode)
 pyspark==3.5.0
 # apache-flink is deliberately absent: 1.18.0 ships no cp311 wheel (cp310 max)
 # and our images run Python 3.11, so pip would fall back to the sdist and pull
@@ -10,16 +31,3 @@ pyspark==3.5.0
 # does not have). We also train on Spark, not Flink. Re-add with a newer Flink
 # on the day a Flink job actually lands.
 # apache-flink==1.18.0  # if using Flink
-
-# Model serving
-tritonclient==2.49.0  # for Triton Inference Server
-torchserve==0.11.0
-
-# Advanced ML
-transformers==4.42.0
-accelerate==0.31.0
-peft==0.11.0
-
-# Hyperparameter tuning
-optuna==4.0.0
-ray==2.40.0  # for distributed tuning

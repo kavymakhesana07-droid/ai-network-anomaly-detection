@@ -51,3 +51,14 @@ pandera==0.19.0
 matplotlib==3.9.2
 seaborn==0.13.2
 plotly==5.23.0
+
+# Model serving (future days - NOT shipped in any image yet)
+tritonclient==2.49.0  # for Triton Inference Server
+torchserve==0.11.0
+
+# Advanced ML (future days - LoRA fine-tuning, hyperparameter search)
+transformers==4.42.0
+accelerate==0.31.0
+peft==0.11.0
+optuna==4.0.0
+ray==2.40.0  # for distributed tuning

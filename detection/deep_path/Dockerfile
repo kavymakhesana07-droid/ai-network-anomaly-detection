@@ -10,11 +10,10 @@ FROM ${BASE_IMAGE} AS builder
 USER root
 
 # Install deep-path-specific deps as root, into the venv created by Dockerfile.base.
-# Unlike the other services this profile pulls a second include chain
-# (detect_deep.txt -> ml.txt -> base.txt), so all three files must be present:
-# base.txt happens to leak through from the base image (it never rm's
-# /tmp/requirements), but ml.txt does not - COPY it explicitly.
-COPY requirements/detect_deep.txt requirements/ml.txt requirements/base.txt /tmp/requirements/
+# detect_deep.txt includes base.txt; base.txt also happens to leak through from
+# the base image (it never rm's /tmp/requirements), but COPY it explicitly so
+# this build does not depend on that accident.
+COPY requirements/detect_deep.txt requirements/base.txt /tmp/requirements/
 RUN pip install --no-cache-dir -r /tmp/requirements/detect_deep.txt \
     && rm -rf /tmp/requirements
 

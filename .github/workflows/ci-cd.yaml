@@ -205,7 +205,8 @@ jobs:
           - ingestion/zeek
           - ingestion/cloud_flows
           - detection/fast_path
-        # --- Uncomment as these are built (Day 4-8) ---
+          - detection/deep_path
+        # --- Uncomment as these are built (Day 5-8) ---
         # - feature_extraction
         # - detection/deep_path
         # - detection/model_registry

@@ -181,6 +181,11 @@ module = [
     "xgboost.*",
     "redis.*",
     "yaml.*",
+    "lightning.*",
+    "mlflow.*",
+    "onnx.*",
+    "onnxruntime.*",
+    "pyspark.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

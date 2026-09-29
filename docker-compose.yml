@@ -125,6 +125,8 @@ services:
         condition: service_healthy
     networks:
       - anomaly-net
+    profiles:
+      - detect
     deploy:
       resources:
         limits:

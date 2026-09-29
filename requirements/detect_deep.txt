@@ -4,7 +4,12 @@
 
 # Streaming
 pyspark==3.5.0
-apache-flink==1.18.0  # if using Flink
+# apache-flink is deliberately absent: 1.18.0 ships no cp311 wheel (cp310 max)
+# and our images run Python 3.11, so pip would fall back to the sdist and pull
+# pemja (a JNI bridge with no cp311 wheel either - needs a JDK the slim image
+# does not have). We also train on Spark, not Flink. Re-add with a newer Flink
+# on the day a Flink job actually lands.
+# apache-flink==1.18.0  # if using Flink
 
 # Model serving
 tritonclient==2.49.0  # for Triton Inference Server

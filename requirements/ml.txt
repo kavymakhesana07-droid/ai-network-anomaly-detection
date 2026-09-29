@@ -19,7 +19,7 @@ xgboost==2.1.1
 lightgbm==4.4.0
 
 # ONNX / Model Serving
-onnx==1.16.1
+onnx==1.23.0
 onnxruntime==1.19.2
 onnxruntime-gpu==1.19.2  # optional, for GPU inference
 

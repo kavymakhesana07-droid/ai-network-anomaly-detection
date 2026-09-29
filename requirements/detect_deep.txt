@@ -13,7 +13,7 @@ torch==2.4.0
 lightning==2.3.3
 
 # ONNX export (train) + runtime (serve)
-onnx==1.16.1
+onnx==1.23.0
 onnxruntime==1.19.2
 
 # Tabular

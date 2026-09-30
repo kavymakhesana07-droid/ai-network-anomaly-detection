@@ -317,7 +317,7 @@ def run_training(args: CliArgs) -> int:
         result = train_model(
             input_path=input_path,
             output_dir=output_dir,
-            model_path=str(output_dir),
+            _model_path=str(output_dir),
             model_name=settings.model_name,
             n_estimators=n_estimators,
             threshold=threshold,

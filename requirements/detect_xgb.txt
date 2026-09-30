@@ -1,0 +1,13 @@
+# XGBoost Supervised Detection - SHIPPED image profile
+#
+# Lean profile: only what detection/xgboost imports at runtime.
+# The full training stack (scikit-learn, pandas, mlflow) lives in ml.txt.
+-r base.txt
+
+# Core ML
+xgboost==2.1.1
+numpy==1.26.4
+scipy==1.13.1
+
+# MLflow (best-effort logging; service runs without it)
+mlflow==2.15.1

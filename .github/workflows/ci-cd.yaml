@@ -206,7 +206,8 @@ jobs:
           - ingestion/cloud_flows
           - detection/fast_path
           - detection/deep_path
-        # --- Uncomment as these are built (Day 5-8) ---
+          - detection/xgboost
+        # --- Uncomment as these are built (Day 6-8) ---
         # - feature_extraction
         # - detection/deep_path
         # - detection/model_registry

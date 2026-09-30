@@ -134,6 +134,34 @@ services:
           memory: 4G
 
   # =========================================================================
+  # XGBoost Supervised Detection
+  # =========================================================================
+  xgboost:
+    build:
+      context: .
+      dockerfile: detection/xgboost/Dockerfile
+    container_name: anomaly-xgboost
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - INPUT_TOPIC=features.flows
+      - OUTPUT_TOPIC=alerts.xgboost
+      - CONSUMER_GROUP=xgboost
+      - MODEL_PATH=/models/xgboost
+      - TRAIN_INPUT=/data/labeled_flows.json
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - detect
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+
+  # =========================================================================
   # Alerting & Correlation
   # =========================================================================
   alerting:

@@ -412,7 +412,7 @@ async def search_models(
     stage: ModelStage | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-):
+) -> dict[str, Any]:
     params = ModelSearchParams(
         detector_type=detector_type,
         stage=stage,
@@ -429,7 +429,7 @@ async def search_models(
 
 
 @app.get("/models/{model_name}/versions/{version}")
-async def get_model(model_name: str, version: str):
+async def get_model(model_name: str, version: str) -> dict[str, Any]:
     # Handle stage names
     try:
         stage = ModelStage(version)
@@ -440,30 +440,33 @@ async def get_model(model_name: str, version: str):
 
 
 @app.post("/models")
-async def register_model(request: ModelRegisterRequest):
+async def register_model(request: ModelRegisterRequest) -> dict[str, Any]:
     metadata = await registry.register_model(request)
     return asdict(metadata)
 
 
 @app.post("/models/{model_name}/versions/{version}/promote")
-async def promote_model(model_name: str, version: str, request: ModelPromoteRequest):
+async def promote_model(
+    model_name: str, version: str, request: ModelPromoteRequest
+) -> ModelPromoteResponse:
     # In real impl, get user from auth context
-    response = await registry.promote_model(model_name, version, request, requested_by="api")
-    return response.model_dump()
+    request.version = version  # ensure version matches path
+    response = await registry.promote_model(model_name, request, requested_by="api")
+    return response
 
 
 @app.post("/models/{model_name}/versions/{version}/archive")
-async def archive_model(model_name: str, version: str):
+async def archive_model(model_name: str, version: str) -> dict[str, Any]:
     return await registry.archive_model(model_name, version)
 
 
 @app.delete("/models/{model_name}/versions/{version}")
-async def delete_model_version(model_name: str, version: str):
+async def delete_model_version(model_name: str, version: str) -> dict[str, Any]:
     return await registry.delete_model_version(model_name, version)
 
 
 @app.get("/models/{model_name}/versions/{version}/uri")
-async def get_model_uri(model_name: str, version: str):
+async def get_model_uri(model_name: str, version: str) -> dict[str, str]:
     try:
         stage = ModelStage(version)
         uri = await registry.get_model_uri(model_name, stage)
@@ -473,7 +476,7 @@ async def get_model_uri(model_name: str, version: str):
 
 
 @app.get("/models/{model_name}/production-ready/{version}")
-async def check_production_ready(model_name: str, version: str):
+async def check_production_ready(model_name: str, version: str) -> dict[str, Any]:
     metadata = await registry.get_model(model_name, version)
     ready, reasons = is_production_ready(metadata)
     return {"ready": ready, "reasons": reasons}

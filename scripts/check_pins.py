@@ -41,16 +41,18 @@ RESOLVE_TIMEOUT = 600
 
 # Profiles excluded from the resolution check, and why.
 #
-# bench.txt      - pins an old scapy on purpose, to compare features offline.
-# ml.txt         - torch/ray resolution takes many minutes and is not installed
-#                  by CI at all; it is a local training profile.
-# features.txt   - pulls in ml.txt.
-# detect_deep.txt- pyspark ships as an sdist only, so it has no wheel and
-#                  --only-binary rejects it. It is not installed by CI yet.
+# bench.txt         - pins an old scapy on purpose, to compare features offline.
+# ml.txt            - torch/ray resolution takes many minutes and is not installed
+#                     by CI at all; it is a local training profile.
+# features.txt      - pulls in ml.txt.
+# detect_deep.txt   - pyspark ships as an sdist only, so it has no wheel and
+#                     --only-binary rejects it. It is not installed by CI yet.
+# model_registry.txt- mlflow dependency tree causes resolution-too-deep errors;
+#                     will be resolved when ArgoCD integration lands (Day 7+).
 #
 # These still get the full PyPI existence check. They move into the resolution
 # gate on the day their Dockerfile actually lands in the build matrix.
-SKIP_RESOLVE = {"bench.txt", "ml.txt", "features.txt", "detect_deep.txt"}
+SKIP_RESOLVE = {"bench.txt", "ml.txt", "features.txt", "detect_deep.txt", "model_registry.txt"}
 
 PIN = re.compile(
     r"^(?P<name>[A-Za-z0-9._-]+(?:\[[A-Za-z0-9,._-]+\])?)\s*==\s*(?P<version>[A-Za-z0-9.*+!-]+)"

@@ -406,7 +406,7 @@ async def health():
     return asdict(result)
 
 
-@app.get("/models")
+@app.get("/models")  # type: ignore[misc]
 async def search_models(
     detector_type: DetectorType | None = None,
     stage: ModelStage | None = None,
@@ -428,7 +428,7 @@ async def search_models(
     }
 
 
-@app.get("/models/{model_name}/versions/{version}")
+@app.get("/models/{model_name}/versions/{version}")  # type: ignore[misc]
 async def get_model(model_name: str, version: str) -> dict[str, Any]:
     # Handle stage names
     try:
@@ -439,13 +439,13 @@ async def get_model(model_name: str, version: str) -> dict[str, Any]:
     return asdict(metadata)
 
 
-@app.post("/models")
+@app.post("/models")  # type: ignore[misc]
 async def register_model(request: ModelRegisterRequest) -> dict[str, Any]:
     metadata = await registry.register_model(request)
     return asdict(metadata)
 
 
-@app.post("/models/{model_name}/versions/{version}/promote")
+@app.post("/models/{model_name}/versions/{version}/promote")  # type: ignore[misc]
 async def promote_model(
     model_name: str, version: str, request: ModelPromoteRequest
 ) -> ModelPromoteResponse:
@@ -455,17 +455,17 @@ async def promote_model(
     return response
 
 
-@app.post("/models/{model_name}/versions/{version}/archive")
+@app.post("/models/{model_name}/versions/{version}/archive")  # type: ignore[misc]
 async def archive_model(model_name: str, version: str) -> dict[str, Any]:
     return await registry.archive_model(model_name, version)
 
 
-@app.delete("/models/{model_name}/versions/{version}")
+@app.delete("/models/{model_name}/versions/{version}")  # type: ignore[misc]
 async def delete_model_version(model_name: str, version: str) -> dict[str, Any]:
     return await registry.delete_model_version(model_name, version)
 
 
-@app.get("/models/{model_name}/versions/{version}/uri")
+@app.get("/models/{model_name}/versions/{version}/uri")  # type: ignore[misc]
 async def get_model_uri(model_name: str, version: str) -> dict[str, str]:
     try:
         stage = ModelStage(version)
@@ -475,7 +475,7 @@ async def get_model_uri(model_name: str, version: str) -> dict[str, str]:
     return {"uri": uri}
 
 
-@app.get("/models/{model_name}/production-ready/{version}")
+@app.get("/models/{model_name}/production-ready/{version}")  # type: ignore[misc]
 async def check_production_ready(model_name: str, version: str) -> dict[str, Any]:
     metadata = await registry.get_model(model_name, version)
     ready, reasons = is_production_ready(metadata)

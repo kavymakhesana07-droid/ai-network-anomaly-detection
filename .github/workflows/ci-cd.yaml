@@ -207,7 +207,8 @@ jobs:
           - detection/fast_path
           - detection/deep_path
           - detection/xgboost
-        # --- Uncomment as these are built (Day 6-8) ---
+          - detection/model_registry
+        # --- Uncomment as these are built (Day 7-8) ---
         # - feature_extraction
         # - detection/deep_path
         # - detection/model_registry

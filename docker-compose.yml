@@ -162,6 +162,31 @@ services:
           memory: 4G
 
   # =========================================================================
+  # Model Registry
+  # =========================================================================
+  model-registry:
+    build:
+      context: .
+      dockerfile: detection/model_registry/Dockerfile
+    container_name: anomaly-model-registry
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_REGISTRY_URI=http://mlflow:5000
+      - MLFLOW_ARTIFACT_ROOT=s3://mlflow-artifacts
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # =========================================================================
   # Alerting & Correlation
   # =========================================================================
   alerting:
@@ -296,6 +321,12 @@ services:
       - mlflow-data:/mlflow
     networks:
       - anomaly-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     deploy:
       resources:
         limits:

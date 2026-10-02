@@ -287,7 +287,7 @@ class AlertingService:
 
         return enriched
 
-    async def _enrich_ip(self, ip: str, field: str) -> tuple[str, dict[str, Any]] | None:
+    async def _enrich_ip(self, ip: str, field: str) -> tuple[str, dict[str, Any] | None] | None:
         """Enrich a single IP with WHOIS data."""
         try:
             # In real implementation, use ipwhois library
@@ -298,7 +298,7 @@ class AlertingService:
         else:
             return f"{field}_ip_enrichment", result
 
-    async def _enrich_whois(self, ip: str, field: str) -> tuple[str, dict[str, Any]] | None:
+    async def _enrich_whois(self, ip: str, field: str) -> tuple[str, dict[str, Any] | None] | None:
         """Enrich a single IP with domain WHOIS data."""
         try:
             result = enrich_ip_whois_domain(ip)

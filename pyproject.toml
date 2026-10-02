@@ -189,6 +189,7 @@ module = [
     "xgboost.*",
     "fastapi.*",
     "uvicorn.*",
+    "redis.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

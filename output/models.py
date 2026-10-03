@@ -173,11 +173,10 @@ class DashboardAlert:
     anomaly_probability: float | None
     model_version: str | None
     inference_time_ms: float | None
-    severity: str | None
     status: str | None
-    src_ip_enrichment: dict | None
-    dst_ip_enrichment: dict | None
-    stix_indicators: list[dict] | None
+    src_ip_enrichment: dict[str, Any] | None
+    dst_ip_enrichment: dict[str, Any] | None
+    stix_indicators: list[dict[str, Any]] | None
     correlated_alerts: list[str] | None
     correlation_score: float | None
 
@@ -320,13 +319,15 @@ def create_siem_event(raw_alert: dict[str, Any]) -> SIEMEvent:
     return event
 
 
-def _map_severity_to_risk(severity: str | dict | None) -> int | None:
+def _map_severity_to_risk(severity: str | dict[str, Any] | None) -> int | None:
     """Map severity to risk score (0-100)."""
     if severity is None:
         return None
     if isinstance(severity, dict):
         severity = severity.get("value", "warning")
-    mapping = {
+    # mypy doesn't narrow the type after isinstance, so we cast
+    severity_str: str = severity if isinstance(severity, str) else "warning"
+    mapping: dict[str, int] = {
         "debug": 0,
         "info": 10,
         "notice": 20,
@@ -336,25 +337,24 @@ def _map_severity_to_risk(severity: str | dict | None) -> int | None:
         "alert": 90,
         "emergency": 100,
     }
-    return mapping.get(severity, 40)
+    return mapping.get(severity_str, 40)
 
 
-def _extract_geo(enrichment: dict | None) -> dict | None:
+def _extract_geo(enrichment: dict[str, Any] | None) -> dict[str, Any] | None:
     if not enrichment:
         return None
-    return {
+    geo: dict[str, Any] = {
         "country_iso_code": enrichment.get("country"),
         "city_name": enrichment.get("city"),
-        "location": {
-            "lat": enrichment.get("latitude"),
-            "lon": enrichment.get("longitude"),
-        }
-        if enrichment.get("latitude") and enrichment.get("longitude")
-        else None,
     }
+    lat = enrichment.get("latitude")
+    lon = enrichment.get("longitude")
+    if lat is not None and lon is not None:
+        geo["location"] = {"lat": lat, "lon": lon}
+    return geo
 
 
-def _extract_asn(enrichment: dict | None) -> dict | None:
+def _extract_asn(enrichment: dict[str, Any] | None) -> dict[str, Any] | None:
     if not enrichment:
         return None
     return {
@@ -370,10 +370,10 @@ def _protocol_number_to_name(proto: int | None) -> str | None:
     return mapping.get(proto, str(proto))
 
 
-def compute_alert_hash(alert: dict) -> str:
+def compute_alert_hash(alert: dict[str, Any]) -> str:
     """Compute deterministic hash for alert deduplication."""
     # Use stable fields for hash
-    stable_fields = {
+    stable_fields: dict[str, Any] = {
         "alert_type": alert.get("alert_type"),
         "flow_key": alert.get("flow_key"),
         "src_ip": alert.get("src_ip"),
@@ -385,13 +385,13 @@ def compute_alert_hash(alert: dict) -> str:
     return hashlib.sha256(data.encode()).hexdigest()[:16]
 
 
-def format_alert_for_slack(alert: dict) -> dict:
+def format_alert_for_slack(alert: dict[str, Any]) -> dict[str, Any]:
     """Format alert for Slack webhook."""
     severity = alert.get("severity", "warning")
     if isinstance(severity, dict):
         severity = severity.get("value", "warning")
 
-    color_map = {
+    color_map: dict[str, str] = {
         "critical": "#FF0000",
         "error": "#FF4500",
         "warning": "#FFA500",
@@ -427,7 +427,7 @@ def format_alert_for_slack(alert: dict) -> dict:
     }
 
 
-def format_alert_for_pagerduty(alert: dict) -> dict:
+def format_alert_for_pagerduty(alert: dict[str, Any]) -> dict[str, Any]:
     """Format alert for PagerDuty Events API v2."""
     severity = alert.get("severity", "warning")
     if isinstance(severity, dict):

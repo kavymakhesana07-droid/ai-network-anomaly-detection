@@ -94,9 +94,6 @@ class IntegrationsService:
             "emergency": 7,
         }
 
-        # HTTP client
-        self.http_client: Any = None
-
         # Metrics
         self.alerts_received: int = 0
         self.alerts_sent: int = 0
@@ -148,7 +145,9 @@ class IntegrationsService:
         sev_level = self.severity_order.get(severity.lower(), 3)
         return sev_level >= self.min_severity_level
 
-    async def _send_with_retry(self, url: str, payload: dict, headers: dict | None = None) -> bool:
+    async def _send_with_retry(
+        self, url: str, payload: dict[str, Any], headers: dict[str, Any] | None = None
+    ) -> bool:
         """Send HTTP request with retry logic."""
         for attempt in range(3):
             try:
@@ -257,9 +256,11 @@ class IntegrationsService:
         self.alerts_received += 1
 
         # Filter by severity
-        severity = alert.get("severity", "warning")
-        if isinstance(severity, dict):
-            severity = severity.get("value", "warning")
+        severity_raw = alert.get("severity", "warning")
+        if isinstance(severity_raw, dict):
+            severity = severity_raw.get("value", "warning")
+        else:
+            severity = str(severity_raw)
 
         if not self._should_alert(severity):
             self.alerts_filtered += 1
@@ -293,9 +294,9 @@ class IntegrationsService:
             elif result:
                 self.alerts_sent += 1
 
-    async def process_message(self, msg: dict[str, Any]) -> None:
+    async def process_message(self, msg: Any) -> None:
         """Process a single alert message from Kafka."""
-        self.process_alert(msg.value)
+        await self.process_alert(msg.value)
 
     async def run(self) -> None:
         """Main processing loop."""
@@ -303,7 +304,7 @@ class IntegrationsService:
 
         try:
             async for msg in self.consumer:
-                self.process_alert(msg.value)
+                await self.process_alert(msg.value)
 
                 if self.alerts_received % 100 == 0:
                     logger.info(

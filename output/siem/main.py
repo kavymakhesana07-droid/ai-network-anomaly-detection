@@ -78,7 +78,7 @@ class SIEMOutputService:
         self.running = False
 
         # Batching
-        self.batch: list[dict] = []
+        self.batch: list[dict[str, Any]] = []
         self.last_flush = time.time()
 
         # Metrics
@@ -357,7 +357,7 @@ class SIEMOutputService:
         except Exception as exc:
             logger.warning("Failed to create ILM policy", error=str(exc))
 
-    def _create_siem_event(self, raw_alert: dict[str, Any]) -> dict:
+    def _create_siem_event(self, raw_alert: dict[str, Any]) -> dict[str, Any]:
         """Convert raw alert to ECS-format document."""
         siem_event = create_siem_event(raw_alert)
         return asdict(siem_event)

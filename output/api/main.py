@@ -13,7 +13,7 @@ import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import structlog
 import uvicorn
@@ -77,7 +77,7 @@ class AlertFilterParams(BaseModel):
 class AlertResponse(BaseModel):
     """Standard alert response."""
 
-    alerts: list[dict]
+    alerts: list[dict[str, Any]]
     total: int
     limit: int
     offset: int
@@ -157,7 +157,7 @@ async def verify_api_key(x_api_key: str | None = Header(None)) -> None:
 
 
 # Health check
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
+@app.get("/health", response_model=HealthResponse, tags=["Health"])  # type: ignore[untyped-decorator]
 async def health_check() -> HealthResponse:
     """Health check endpoint."""
     redis_status = "unknown"
@@ -197,7 +197,7 @@ async def health_check() -> HealthResponse:
     response_model=AlertResponse,
     dependencies=[Depends(verify_api_key)],
     tags=["Alerts"],
-)
+)  # type: ignore[untyped-decorator]
 async def list_alerts(
     alert_type: str | None = Query(None, description="Filter by alert type"),
     severity: str | None = Query(None, description="Filter by severity"),
@@ -216,7 +216,7 @@ async def list_alerts(
     # Build Elasticsearch query
     es = await get_es_client()
 
-    must_clauses = []
+    must_clauses: list[dict[str, Any]] = []
 
     if alert_type:
         must_clauses.append({"term": {"alert.type": alert_type}})
@@ -274,23 +274,31 @@ async def list_alerts(
         raise HTTPException(status_code=500, detail="Query failed") from None
 
 
-@app.get("/api/v1/alerts/{alert_id}", dependencies=[Depends(verify_api_key)], tags=["Alerts"])
-async def get_alert(alert_id: str) -> dict:
+@app.get(
+    "/api/v1/alerts/{alert_id}",
+    dependencies=[Depends(verify_api_key)],
+    tags=["Alerts"],
+)  # type: ignore[untyped-decorator]
+async def get_alert(alert_id: str) -> dict[str, Any]:
     """Get a single alert by ID."""
     es = await get_es_client()
 
     try:
         response = await es.get(index="network-alerts*", id=alert_id)
-        return response["_source"]
+        return cast(dict[str, Any], response["_source"])
     except Exception as exc:
         raise HTTPException(status_code=404, detail="Alert not found") from exc
 
 
-@app.get("/api/v1/alerts/stats/summary", dependencies=[Depends(verify_api_key)], tags=["Alerts"])
+@app.get(
+    "/api/v1/alerts/stats/summary",
+    dependencies=[Depends(verify_api_key)],
+    tags=["Alerts"],
+)  # type: ignore[untyped-decorator]
 async def alert_stats(
     start_time: float | None = Query(None),
     end_time: float | None = Query(None),
-) -> dict:
+) -> dict[str, Any]:
     """Get alert statistics."""
     es = await get_es_client()
 
@@ -357,8 +365,12 @@ async def alert_stats(
 
 
 # Models endpoints
-@app.get("/api/v1/models", dependencies=[Depends(verify_api_key)], tags=["Models"])
-async def list_models() -> dict:
+@app.get(
+    "/api/v1/models",
+    dependencies=[Depends(verify_api_key)],
+    tags=["Models"],
+)  # type: ignore[untyped-decorator]
+async def list_models() -> dict[str, Any]:
     """List registered models from MLflow."""
     # This would integrate with model_registry service
     return {
@@ -368,7 +380,10 @@ async def list_models() -> dict:
 
 
 # Metrics endpoint
-@app.get("/metrics", tags=["Metrics"])
+@app.get(
+    "/metrics",
+    tags=["Metrics"],
+)  # type: ignore[untyped-decorator]
 async def metrics() -> str:
     """Prometheus metrics endpoint."""
     # In production, use prometheus_client

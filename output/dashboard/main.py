@@ -43,7 +43,7 @@ class DashboardService:
 
         # In-memory alert buffer (for real-time display)
         self.alert_buffer: deque[DashboardAlert] = deque(maxlen=config.max_alerts_display)
-        self.alert_counts: dict[str, int] = {"total": 0, "anomalies": 0, "by_severity": {}}
+        self.alert_counts: dict[str, Any] = {"total": 0, "anomalies": 0, "by_severity": {}}
 
     async def start(self) -> None:
         """Initialize Kafka consumer and Redis."""

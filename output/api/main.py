@@ -157,7 +157,7 @@ async def verify_api_key(x_api_key: str | None = Header(None)) -> None:
 
 
 # Health check
-@app.get("/health", response_model=HealthResponse, tags=["Health"])  # type: ignore[untyped-decorator]
+@app.get("/health", response_model=HealthResponse, tags=["Health"])  # type: ignore
 async def health_check() -> HealthResponse:
     """Health check endpoint."""
     redis_status = "unknown"
@@ -197,7 +197,7 @@ async def health_check() -> HealthResponse:
     response_model=AlertResponse,
     dependencies=[Depends(verify_api_key)],
     tags=["Alerts"],
-)  # type: ignore[untyped-decorator]
+)  # type: ignore
 async def list_alerts(
     alert_type: str | None = Query(None, description="Filter by alert type"),
     severity: str | None = Query(None, description="Filter by severity"),
@@ -278,7 +278,7 @@ async def list_alerts(
     "/api/v1/alerts/{alert_id}",
     dependencies=[Depends(verify_api_key)],
     tags=["Alerts"],
-)  # type: ignore[untyped-decorator]
+)  # type: ignore
 async def get_alert(alert_id: str) -> dict[str, Any]:
     """Get a single alert by ID."""
     es = await get_es_client()
@@ -294,7 +294,7 @@ async def get_alert(alert_id: str) -> dict[str, Any]:
     "/api/v1/alerts/stats/summary",
     dependencies=[Depends(verify_api_key)],
     tags=["Alerts"],
-)  # type: ignore[untyped-decorator]
+)  # type: ignore
 async def alert_stats(
     start_time: float | None = Query(None),
     end_time: float | None = Query(None),
@@ -369,7 +369,7 @@ async def alert_stats(
     "/api/v1/models",
     dependencies=[Depends(verify_api_key)],
     tags=["Models"],
-)  # type: ignore[untyped-decorator]
+)  # type: ignore
 async def list_models() -> dict[str, Any]:
     """List registered models from MLflow."""
     # This would integrate with model_registry service
@@ -383,7 +383,7 @@ async def list_models() -> dict[str, Any]:
 @app.get(
     "/metrics",
     tags=["Metrics"],
-)  # type: ignore[untyped-decorator]
+)  # type: ignore
 async def metrics() -> str:
     """Prometheus metrics endpoint."""
     # In production, use prometheus_client

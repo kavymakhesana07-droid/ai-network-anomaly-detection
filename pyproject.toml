@@ -190,6 +190,12 @@ module = [
     "fastapi.*",
     "uvicorn.*",
     "redis.*",
+    "streamlit.*",
+    "elasticsearch.*",
+    "opensearch.*",
+    "httpx.*",
+    "slack.*",
+    "pagerduty.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

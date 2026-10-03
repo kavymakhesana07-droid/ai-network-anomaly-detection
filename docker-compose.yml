@@ -235,6 +235,8 @@ services:
         condition: service_healthy
     networks:
       - anomaly-net
+    profiles:
+      - output
     deploy:
       resources:
         limits:
@@ -261,6 +263,61 @@ services:
         condition: service_healthy
     networks:
       - anomaly-net
+    profiles:
+      - output
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # =========================================================================
+  # Integrations (Slack, PagerDuty, Webhooks)
+  # =========================================================================
+  integrations:
+    build:
+      context: .
+      dockerfile: output/integrations/Dockerfile
+    container_name: anomaly-integrations
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - ALERTS_TOPIC=alerts.enriched
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - output
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # =========================================================================
+  # FastAPI REST API
+  # =========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: output/api/Dockerfile
+    container_name: anomaly-api
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "8000:8000"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - anomaly-net
+    profiles:
+      - output
     deploy:
       resources:
         limits:

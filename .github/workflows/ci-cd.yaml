@@ -209,7 +209,11 @@ jobs:
           - detection/xgboost
           - detection/model_registry
           - alerting
-        # --- Uncomment as these are built (Day 8) ---
+          - output/dashboard
+          - output/siem
+          - output/integrations
+          - output/api
+        # --- Uncomment as these are built (Day 9+) ---
         # - feature_extraction
         # - detection/deep_path
         # - detection/model_registry

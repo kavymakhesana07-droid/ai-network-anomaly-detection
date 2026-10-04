@@ -1,0 +1,153 @@
+# E2E Test Infrastructure - Docker Compose
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+
+version: '3.8'
+
+services:
+  # Kafka for E2E tests
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.1
+    container_name: e2e-redpanda
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+      - --rpc-addr=0.0.0.0:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --schema-registry-addr=0.0.0.0:8081
+      - --http-addr=0.0.0.0:8080
+      - --mode=dev-container
+      - --default-topic-replications=1
+      - --num-partitions=6
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+      - "8081:8081"
+      - "8080:8080"
+    volumes:
+      - e2e-redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Redis for caching/deduplication
+  redis:
+    image: redis:7-alpine
+    container_name: e2e-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - e2e-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Elasticsearch for SIEM output
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: e2e-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.monitoring.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - e2e-elasticsearch-data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  # MLflow for model registry
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.15.1
+    container_name: e2e-mlflow
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlartifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - e2e-mlflow-data:/mlflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: e2e-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - e2e-prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: e2e-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      - e2e-grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+
+  # MinIO for S3-compatible artifact storage
+  minio:
+    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: e2e-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - e2e-minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  e2e-redpanda-data:
+  e2e-redis-data:
+  e2e-elasticsearch-data:
+  e2e-mlflow-data:
+  e2e-prometheus-data:
+  e2e-grafana-data:
+  e2e-minio-data:

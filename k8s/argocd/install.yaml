@@ -1,0 +1,632 @@
+# ArgoCD Installation Manifests
+# This file contains the ArgoCD installation manifests for the anomaly detection platform
+# Apply with: kubectl apply -f k8s/argocd/install.yaml
+
+---
+# ArgoCD Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    name: argocd
+    managed-by: kustomize
+---
+# ArgoCD Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-server
+  namespace: argocd
+---
+# ArgoCD RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-server
+  namespace: argocd
+rules:
+  - apiGroups: [""]
+    resources: ["secrets", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications", "applicationsets", "appprojects"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-server
+  namespace: argocd
+subjects:
+  - kind: ServiceAccount
+    name: argocd-server
+    namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-server
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications", "applicationsets", "appprojects"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-server
+subjects:
+  - kind: ServiceAccount
+    name: argocd-server
+    namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-server
+---
+# ArgoCD ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  url: https://argocd.anomaly-detection.example.com
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  # Resource tracking
+  resource.tracking.method: annotation
+  # Custom health checks
+  resource.customizations.health.argoproj.io_Application: |
+    hs = {}
+    hs.status = "Healthy"
+    hs.message = ""
+    if obj.status ~= nil then
+      if obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+    end
+    return hs
+---
+# ArgoCD Secret (initial admin password)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-secret
+  namespace: argocd
+type: Opaque
+stringData:
+  admin.password: $2a$10$rqZjE.fBWzNX.1MJ0qhFh.fVcQ8N0Xb.2a8Fc9T3L8Y7K9s0A1B2C3  # admin:admin123 (change on first login!)
+  # Or generate with: htpasswd -bnBC 10 "" "admin123" | tr -d ':\n'
+---
+# ArgoCD Server Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-server
+        app.kubernetes.io/part-of: argocd
+    spec:
+      serviceAccountName: argocd-server
+      containers:
+        - name: argocd-server
+          image: ghcr.io/argoproj/argocd:v2.9.3
+          imagePullPolicy: IfNotPresent
+          command:
+            - argocd-server
+            - --staticassets
+            - /shared/app
+            - --loglevel
+            - info
+            - --logformat
+            - json
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8083
+              name: grpc
+          env:
+            - name: ARGOCD_SERVER
+              value: "argocd-server.argocd.svc.cluster.local:8080"
+            - name: ARGOCD_GRPC_PORT
+              value: "8083"
+          volumeMounts:
+            - name: argocd-redis
+              mountPath: /tmp/argocd/redis
+            - name: argocd-repo-server
+              mountPath: /tmp/argocd/repo-server
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+      volumes:
+        - name: argocd-redis
+          emptyDir: {}
+        - name: argocd-repo-server
+          emptyDir: {}
+---
+# ArgoCD Server Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      port: 8083
+      targetPort: 8083
+  selector:
+    app.kubernetes.io/name: argocd-server
+---
+# ArgoCD Repo Server Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-repo-server
+    app.kubernetes.io/part-of: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-repo-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-repo-server
+        app.kubernetes.io/part-of: argocd
+    spec:
+      serviceAccountName: argocd-repo-server
+      containers:
+        - name: argocd-repo-server
+          image: ghcr.io/argoproj/argocd:v2.9.3
+          imagePullPolicy: IfNotPresent
+          command:
+            - argocd-repo-server
+            - --loglevel
+            - info
+            - --logformat
+            - json
+          ports:
+            - containerPort: 8084
+              name: http
+          volumeMounts:
+            - name: ssh-keys
+              mountPath: /home/argocd/.ssh
+              readOnly: true
+            - name: gpg-keys
+              mountPath: /home/argocd/.gnupg
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+      volumes:
+        - name: ssh-keys
+          secret:
+            secretName: argocd-ssh-keys
+            optional: true
+        - name: gpg-keys
+          secret:
+            secretName: argocd-gpg-keys
+            optional: true
+---
+# ArgoCD Application Controller Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-application-controller
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-application-controller
+    app.kubernetes.io/part-of: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-application-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-application-controller
+        app.kubernetes.io/part-of: argocd
+    spec:
+      serviceAccountName: argocd-application-controller
+      containers:
+        - name: argocd-application-controller
+          image: ghcr.io/argoproj/argocd:v2.9.3
+          imagePullPolicy: IfNotPresent
+          command:
+            - argocd-application-controller
+            - --loglevel
+            - info
+            - --logformat
+            - json
+            - --operation-processors
+            - "10"
+            - --resource-tracking
+            - annotation
+          env:
+            - name: ARGOCD_CONTROLLER_RESOURCE_TRACKING
+              value: "annotation"
+            - name: ARGOCD_CONTROLLER_OPERATION_PROCESSORS
+              value: "10"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "1Gi"
+---
+# ArgoCD Dex Server (for SSO - optional)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-dex-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-dex-server
+    app.kubernetes.io/part-of: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-dex-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-dex-server
+        app.kubernetes.io/part-of: argocd
+    spec:
+      containers:
+        - name: dex
+          image: ghcr.io/dexidp/dex:v2.38.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - dex
+            - serve
+            - /etc/dex/config.yaml
+          ports:
+            - containerPort: 5556
+              name: grpc
+            - containerPort: 5557
+              name: http
+            - containerPort: 5558
+              name: https
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex
+            - name: tls
+              mountPath: /etc/dex/tls
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5558
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5558
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+      volumes:
+        - name: config
+          configMap:
+            name: argocd-dex-config
+        - name: tls
+          secret:
+            secretName: argocd-dex-tls
+            optional: true
+---
+# ArgoCD Redis
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: argocd-redis
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/part-of: argocd
+spec:
+  serviceName: argocd-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-redis
+        app.kubernetes.io/part-of: argocd
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --maxmemory
+            - "256mb"
+            - --maxmemory-policy
+            - allkeys-lru
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: argocd-redis-data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi
+---
+# ArgoCD Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-redis
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/part-of: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+  selector:
+    app.kubernetes.io/name: argocd-redis
+---
+# ArgoCD Server Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      port: 443
+      targetPort: 8083
+  selector:
+    app.kubernetes.io/name: argocd-server
+---
+# ArgoCD Repo Server Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-repo-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-repo-server
+    app.kubernetes.io/part-of: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084
+  selector:
+    app.kubernetes.io/name: argocd-repo-server
+---
+# ArgoCD Ingress (for external access)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server-ingress
+  namespace: argocd
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/grpc-backend: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  tls:
+    - hosts:
+        - argocd.anomaly-detection.example.com
+      secretName: argocd-server-tls
+  rules:
+    - host: argocd.anomaly-detection.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80
+---
+# ArgoCD Notifications ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  trigger.on-deploy-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      send:
+        - slack
+        - email
+  trigger.on-deploy-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send:
+        - slack
+        - email
+  trigger.on-sync-running: |
+    - when: app.status.operationState.phase in ['Running']
+      send:
+        - slack
+  template.app-deployed: |
+    message: |
+      Application {{.app.metadata.name}} has been deployed successfully.
+      Namespace: {{.app.spec.destination.namespace}}
+      Revision: {{.app.status.sync.revision}}
+      URL: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
+  template.app-deploy-failed: |
+    message: |
+      Application {{.app.metadata.name}} deployment failed.
+      Namespace: {{.app.spec.destination.namespace}}
+      Error: {{.app.status.operationState.message}}
+      URL: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
+  service.slack: |
+    token: $slack-token
+  service.email: |
+    host: smtp.gmail.com
+    port: 587
+    username: $email-username
+    password: $email-password
+    from: argocd@anomaly-detection.example.com
+---
+# ArgoCD Notification Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: argocd
+type: Opaque
+stringData:
+  slack-token: ""
+  email-username: ""
+  email-password: ""

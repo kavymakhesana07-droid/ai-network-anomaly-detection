@@ -1,0 +1,868 @@
+# Service Deployments
+# This file contains all service deployments for the anomaly detection platform
+
+---
+# Ingestion Services
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pcap-ingestor
+  namespace: anomaly-detection
+  labels:
+    app: pcap-ingestor
+    component: ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pcap-ingestor
+  template:
+    metadata:
+      labels:
+        app: pcap-ingestor
+        component: ingestion
+    spec:
+      containers:
+        - name: pcap-ingestor
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/ingestion/pcap:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: TOPIC
+              value: "raw.packets"
+            - name: PCAP_PATH
+              value: "/data/sample.pcap"
+            - name: BATCH_SIZE
+              value: "1000"
+            - name: FLUSH_INTERVAL_MS
+              value: "100"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kafka-data-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: live-capture-ingestor
+  namespace: anomaly-detection
+  labels:
+    app: live-capture-ingestor
+    component: ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: live-capture-ingestor
+  template:
+    metadata:
+      labels:
+        app: live-capture-ingestor
+        component: ingestion
+    spec:
+      containers:
+        - name: live-capture-ingestor
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/ingestion/live_capture:latest
+          imagePullPolicy: Always
+          securityContext:
+            capabilities:
+              add:
+                - NET_RAW
+                - NET_ADMIN
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: TOPIC
+              value: "raw.packets"
+            - name: INTERFACE
+              value: "eth0"
+            - name: PROMISC
+              value: "true"
+            - name: SNAPLEN
+              value: "65535"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netflow-ingestor
+  namespace: anomaly-detection
+  labels:
+    app: netflow-ingestor
+    component: ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netflow-ingestor
+  template:
+    metadata:
+      labels:
+        app: netflow-ingestor
+        component: ingestion
+    spec:
+      containers:
+        - name: netflow-ingestor
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/ingestion/netflow:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: TOPIC
+              value: "raw.netflow"
+            - name: LISTEN_PORT
+              value: "2055"
+            - name: PROTOCOL
+              value: "netflow"
+          ports:
+            - containerPort: 2055
+              name: netflow-udp
+              protocol: UDP
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zeek-ingestor
+  namespace: anomaly-detection
+  labels:
+    app: zeek-ingestor
+    component: ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zeek-ingestor
+  template:
+    metadata:
+      labels:
+        app: zeek-ingestor
+        component: ingestion
+    spec:
+      containers:
+        - name: zeek-ingestor
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/ingestion/zeek:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: TOPIC
+              value: "raw.zeek"
+            - name: ZEEK_INTERFACE
+              value: "eth0"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-flows-ingestor
+  namespace: anomaly-detection
+  labels:
+    app: cloud-flows-ingestor
+    component: ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-flows-ingestor
+  template:
+    metadata:
+      labels:
+        app: cloud-flows-ingestor
+        component: ingestion
+    spec:
+      containers:
+        - name: cloud-flows-ingestor
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/ingestion/cloud_flows:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: TOPIC
+              value: "raw.cloud_flows"
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: GCP_PROJECT_ID
+              value: "anomaly-detection"
+            - name: AZURE_SUBSCRIPTION_ID
+              value: "anomaly-detection"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+# Feature Extraction
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-extractor
+  namespace: anomaly-detection
+  labels:
+    app: feature-extractor
+    component: feature-extraction
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: feature-extractor
+  template:
+    metadata:
+      labels:
+        app: feature-extractor
+        component: feature-extraction
+    spec:
+      containers:
+        - name: feature-extractor
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/feature_extraction:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: INPUT_TOPIC
+              value: "raw.packets"
+            - name: OUTPUT_TOPIC
+              value: "features.flows"
+            - name: CONSUMER_GROUP
+              value: "feature-extractor"
+            - name: BATCH_SIZE
+              value: "100"
+            - name: FLUSH_INTERVAL_MS
+              value: "1000"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+# Detection Services
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fast-path
+  namespace: anomaly-detection
+  labels:
+    app: fast-path
+    component: detection
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fast-path
+  template:
+    metadata:
+      labels:
+        app: fast-path
+        component: detection
+    spec:
+      containers:
+        - name: fast-path
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/detection/fast_path:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: INPUT_TOPIC
+              value: "features.flows"
+            - name: OUTPUT_TOPIC
+              value: "alerts.raw"
+            - name: CONSUMER_GROUP
+              value: "fast-path"
+            - name: MODEL_PATH
+              value: "/models/fast_path"
+            - name: REDIS_URL
+              value: "redis://redis.anomaly-detection.svc.cluster.local:6379"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deep-path
+  namespace: anomaly-detection
+  labels:
+    app: deep-path
+    component: detection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deep-path
+  template:
+    metadata:
+      labels:
+        app: deep-path
+        component: detection
+    spec:
+      containers:
+        - name: deep-path
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/detection/deep_path:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: INPUT_TOPIC
+              value: "features.flows"
+            - name: OUTPUT_TOPIC
+              value: "alerts.deep"
+            - name: CONSUMER_GROUP
+              value: "deep-path"
+            - name: MODEL_PATH
+              value: "/models/deep_path"
+            - name: SPARK_MASTER
+              value: "local[*]"
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xgboost
+  namespace: anomaly-detection
+  labels:
+    app: xgboost
+    component: detection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xgboost
+  template:
+    metadata:
+      labels:
+        app: xgboost
+        component: detection
+    spec:
+      containers:
+        - name: xgboost
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/detection/xgboost:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: INPUT_TOPIC
+              value: "features.flows"
+            - name: OUTPUT_TOPIC
+              value: "alerts.xgboost"
+            - name: CONSUMER_GROUP
+              value: "xgboost"
+            - name: MODEL_PATH
+              value: "/models/xgboost"
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-registry
+  namespace: anomaly-detection
+  labels:
+    app: model-registry
+    component: model-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: model-registry
+  template:
+    metadata:
+      labels:
+        app: model-registry
+        component: model-registry
+    spec:
+      containers:
+        - name: model-registry
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/detection/model_registry:latest
+          imagePullPolicy: Always
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow.anomaly-detection.svc.cluster.local:5000"
+            - name: MLFLOW_REGISTRY_URI
+              value: "http://mlflow.anomaly-detection.svc.cluster.local:5000"
+            - name: MLFLOW_ARTIFACT_ROOT
+              value: "s3://mlflow-artifacts"
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+# Alerting & Output
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerting
+  namespace: anomaly-detection
+  labels:
+    app: alerting
+    component: alerting
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alerting
+  template:
+    metadata:
+      labels:
+        app: alerting
+        component: alerting
+    spec:
+      containers:
+        - name: alerting
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/alerting:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: INPUT_TOPICS
+              value: "alerts.raw,alerts.deep,alerts.xgboost"
+            - name: OUTPUT_TOPIC
+              value: "alerts.enriched"
+            - name: REDIS_URL
+              value: "redis://redis.anomaly-detection.svc.cluster.local:6379"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: anomaly-detection
+  labels:
+    app: dashboard
+    component: output
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+        component: output
+    spec:
+      containers:
+        - name: dashboard
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/output/dashboard:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: ALERTS_TOPIC
+              value: "alerts.enriched"
+            - name: REDIS_URL
+              value: "redis://redis.anomaly-detection.svc.cluster.local:6379"
+          ports:
+            - containerPort: 8501
+              name: http
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8501
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: siem-output
+  namespace: anomaly-detection
+  labels:
+    app: siem-output
+    component: output
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: siem-output
+  template:
+    metadata:
+      labels:
+        app: siem-output
+        component: output
+    spec:
+      containers:
+        - name: siem-output
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/output/siem:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: ALERTS_TOPIC
+              value: "alerts.enriched"
+            - name: ELASTICSEARCH_URL
+              value: "http://elasticsearch.monitoring.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_INDEX
+              value: "network-alerts"
+            - name: ELASTICSEARCH_INDEX_TEMPLATE
+              value: "network-alerts-template"
+            - name: ELASTICSEARCH_ILM_POLICY
+              value: "network-alerts-ilm"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: integrations
+  namespace: anomaly-detection
+  labels:
+    app: integrations
+    component: output
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: integrations
+  template:
+    metadata:
+      labels:
+        app: integrations
+        component: output
+    spec:
+      containers:
+        - name: integrations
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/output/integrations:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: ALERTS_TOPIC
+              value: "alerts.enriched"
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: integrations-secrets
+                  key: slack-webhook-url
+                  optional: true
+            - name: PAGERDUTY_INTEGRATION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: integrations-secrets
+                  key: pagerduty-key
+                  optional: true
+            - name: MATTERMOST_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: integrations-secrets
+                  key: mattermost-webhook-url
+                  optional: true
+            - name: WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: integrations-secrets
+                  key: webhook-url
+                  optional: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: anomaly-detection
+  labels:
+    app: api
+    component: output
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        component: output
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/kavymakhesana07-droid/anomaly-detection/output/api:latest
+          imagePullPolicy: Always
+          env:
+            - name: KAFKA_BROKERS
+              value: "redpanda.streaming.svc.cluster.local:9092"
+            - name: REDIS_URL
+              value: "redis://redis.anomaly-detection.svc.cluster.local:6379"
+            - name: ELASTICSEARCH_URL
+              value: "http://elasticsearch.monitoring.svc.cluster.local:9200"
+            - name: ELASTICSEARCH_INDEX
+              value: "network-alerts"
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5

@@ -1,0 +1,198 @@
+{
+  "dashboard": {
+    "title": "Network Anomaly Detection - Overview",
+    "uid": "anomaly-detection-overview",
+    "tags": ["anomaly-detection", "network", "security"],
+    "timezone": "utc",
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Alerts per Second",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(alerts_received_total[1m])",
+            "legendFormat": "Alerts/sec"
+          }
+        ],
+        "xaxis": {"mode": "time"},
+        "yaxis": {"format": "ops", "label": "Alerts/sec"}
+      },
+      {
+        "id": 2,
+        "title": "Anomalies by Detector Type",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (alert_type) (rate(alerts_total[5m]))",
+            "legendFormat": "{{alert_type}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Alerts by Severity",
+        "type": "barchart",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (severity) (rate(alerts_total[5m]))",
+            "legendFormat": "{{severity}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Anomaly Score Distribution",
+        "type": "heatmap",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, rate(anomaly_score_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Inference Latency (p50/p95/p99)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(inference_latency_ms_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(inference_latency_ms_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(inference_latency_ms_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yaxis": {"format": "ms", "label": "Latency (ms)"}
+      },
+      {
+        "id": 6,
+        "title": "Top Anomalous Source IPs",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (src_ip) (rate(alerts_total[5m])))",
+            "format": "table"
+          }
+        ],
+        "columns": [
+          {"text": "Source IP", "value": "src_ip"},
+          {"text": "Alert Rate", "value": "Value"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Detection Pipeline Latency",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 24, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(ingestion_latency_ms_bucket[5m]))",
+            "legendFormat": "Ingestion p50"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(feature_extraction_latency_ms_bucket[5m]))",
+            "legendFormat": "Feature Extraction p50"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(fast_path_inference_latency_ms_bucket[5m]))",
+            "legendFormat": "Fast Path p50"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(deep_path_inference_latency_ms_bucket[5m]))",
+            "legendFormat": "Deep Path p50"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(xgboost_inference_latency_ms_bucket[5m]))",
+            "legendFormat": "XGBoost p50"
+          }
+        ],
+        "yaxis": {"format": "ms", "label": "Latency (ms)"}
+      },
+      {
+        "id": 8,
+        "title": "System Health",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 32, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "up{job=~\"anomaly-detection.*\"}",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}
+            ]
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Kafka Consumer Lag",
+        "type": "graph",
+        "gridPos": {"x": 6, "y": 32, "w": 18, "h": 8},
+        "targets": [
+          {
+            "expr": "kafka_consumer_lag",
+            "legendFormat": "{{topic}} - {{partition}}"
+          }
+        ],
+        "yaxis": {"format": "short", "label": "Lag"}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "detector",
+          "type": "query",
+          "query": "label_values(alerts_total, alert_type)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "allValue": "all"
+        },
+        {
+          "name": "severity",
+          "type": "query",
+          "query": "label_values(alerts_total, severity)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "allValue": "all"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "type": "annotation",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "rgba(255, 96, 0, 1)",
+          "query": "deployment_created"
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}

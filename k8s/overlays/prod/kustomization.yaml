@@ -1,0 +1,131 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: anomaly-detection
+
+resources:
+  - ../../base/namespace.yaml
+  - ../../base/storage.yaml
+  - ../../base/pvc.yaml
+  - ../../base/redpanda.yaml
+  - ../../base/deployments.yaml
+
+commonLabels:
+  environment: prod
+  managed-by: kustomize
+
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: pcap-ingestor
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: live-capture-ingestor
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: netflow-ingestor
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: zeek-ingestor
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: cloud-flows-ingestor
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: feature-extractor
+      spec:
+        replicas: 3
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: fast-path
+      spec:
+        replicas: 3
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: deep-path
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: xgboost
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: fast-path
+      spec:
+        template:
+          spec:
+            containers:
+              - name: fast-path
+                resources:
+                  requests:
+                    cpu: "1000m"
+                    memory: "1Gi"
+                  limits:
+                    cpu: "2000m"
+                    memory: "2Gi"
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: deep-path
+      spec:
+        template:
+          spec:
+            containers:
+              - name: deep-path
+                resources:
+                  requests:
+                    cpu: "2000m"
+                    memory: "4Gi"
+                  limits:
+                    cpu: "4000m"
+                    memory: "8Gi"
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: xgboost
+      spec:
+        template:
+          spec:
+            containers:
+              - name: xgboost
+                resources:
+                  requests:
+                    cpu: "2000m"
+                    memory: "4Gi"
+                  limits:
+                    cpu: "4000m"
+                    memory: "8Gi"

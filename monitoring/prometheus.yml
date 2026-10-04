@@ -2,8 +2,8 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    cluster: 'anomaly-detection'
-    environment: 'dev'
+    cluster: 'anomaly-detection-e2e'
+    environment: 'test'
 
 alerting:
   alertmanagers:
@@ -13,58 +13,86 @@ alerting:
 rule_files: []
 
 scrape_configs:
-  # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # Redpanda metrics
   - job_name: 'redpanda'
     static_configs:
       - targets: ['redpanda:9644']
-    metrics_path: /metrics
 
-  # Feature Extractor
-  - job_name: 'feature-extractor'
+  - job_name: 'kafka'
     static_configs:
-      - targets: ['feature-extractor:9090']
+      - targets: ['redpanda:9092']
 
-  # Fast Path Detection
-  - job_name: 'fast-path'
+  - job_name: 'elasticsearch'
     static_configs:
-      - targets: ['fast-path:9090']
+      - targets: ['elasticsearch:9200']
 
-  # Deep Path Detection
-  - job_name: 'deep-path'
-    static_configs:
-      - targets: ['deep-path:9090']
-
-  # Alerting
-  - job_name: 'alerting'
-    static_configs:
-      - targets: ['alerting:9090']
-
-  # Dashboard
-  - job_name: 'dashboard'
-    static_configs:
-      - targets: ['dashboard:8501']
-
-  # SIEM Output
-  - job_name: 'siem-output'
-    static_configs:
-      - targets: ['siem-output:9090']
-
-  # MLflow
   - job_name: 'mlflow'
     static_configs:
       - targets: ['mlflow:5000']
 
-  # Node Exporter (if running)
-  - job_name: 'node-exporter'
+  - job_name: 'redis'
     static_configs:
-      - targets: ['host.docker.internal:9100']
+      - targets: ['redis:6379']
 
-  # cAdvisor (container metrics)
-  - job_name: 'cadvisor'
+  - job_name: 'minio'
     static_configs:
-      - targets: ['host.docker.internal:8080']
+      - targets: ['minio:9000']
+
+  - job_name: 'anomaly-detection-services'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - anomaly-detection
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - anomaly-detection
+            - monitoring
+            - streaming
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name

@@ -5,7 +5,9 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - storage.yaml
+  - pvc.yaml
   - redpanda.yaml
+  - deployments.yaml
 
 commonLabels:
   project: anomaly-detection

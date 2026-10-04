@@ -6,7 +6,9 @@ namespace: anomaly-detection
 resources:
   - ../../base/namespace.yaml
   - ../../base/storage.yaml
+  - ../../base/pvc.yaml
   - ../../base/redpanda.yaml
+  - ../../base/deployments.yaml
 
 commonLabels:
   environment: dev
@@ -31,3 +33,27 @@ patches:
                   limits:
                     cpu: "1000m"
                     memory: "1Gi"
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: deep-path
+      spec:
+        template:
+          spec:
+            containers:
+              - name: deep-path
+                resources:
+                  requests:
+                    cpu: "500m"
+                    memory: "2Gi"
+                  limits:
+                    cpu: "1000m"
+                    memory: "2Gi"
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: fast-path
+      spec:
+        replicas: 1

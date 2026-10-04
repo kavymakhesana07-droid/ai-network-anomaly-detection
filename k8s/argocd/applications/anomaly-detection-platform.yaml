@@ -1,0 +1,173 @@
+# ArgoCD Application for the Anomaly Detection Platform
+# This Application manages all components of the anomaly detection platform
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: anomaly-detection-platform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: anomaly-detection-platform
+    app.kubernetes.io/part-of: anomaly-detection
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kavymakhesana07-droid/ai-network-anomaly-detection.git
+    targetRevision: HEAD
+    path: k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: anomaly-detection
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jqPathExpressions:
+        - .spec.template.spec.containers[].env[] | select(.name | contains("PASSWORD") or contains("TOKEN") or contains("SECRET"))
+
+---
+# ArgoCD Application for the Monitoring Stack
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-stack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: monitoring-stack
+    app.kubernetes.io/part-of: anomaly-detection
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kavymakhesana07-droid/ai-network-anomaly-detection.git
+    targetRevision: HEAD
+    path: k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+---
+# ArgoCD Application for the Streaming Infrastructure
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: streaming-infrastructure
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: streaming-infrastructure
+    app.kubernetes.io/part-of: anomaly-detection
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kavymakhesana07-droid/ai-network-anomaly-detection.git
+    targetRevision: HEAD
+    path: k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: streaming
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+---
+# ArgoCD Project for the Anomaly Detection Platform
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: anomaly-detection
+  namespace: argocd
+spec:
+  description: Anomaly Detection Platform Project
+  sourceRepos:
+    - https://github.com/kavymakhesana07-droid/ai-network-anomaly-detection.git
+  destinations:
+    - namespace: anomaly-detection
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: streaming
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: ""
+      kind: PersistentVolume
+    - group: ""
+      kind: PersistentVolumeClaim
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: StatefulSet
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob
+  roles:
+    - name: admin
+      description: Admin role for anomaly detection platform
+      policies:
+        - p, proj:anomaly-detection:admin, applications, *, anomaly-detection/*, allow
+    - name: developer
+      description: Developer role for anomaly detection platform
+      policies:
+        - p, proj:anomaly-detection:developer, applications, get, anomaly-detection/*, allow
+        - p, proj:anomaly-detection:developer, applications, sync, anomaly-detection/*, allow
+    - name: viewer
+      description: Viewer role for anomaly detection platform
+      policies:
+        - p, proj:anomaly-detection:viewer, applications, get, anomaly-detection/*, allow

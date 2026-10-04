@@ -34,6 +34,7 @@ class RedisTestHelper:
     async def _cleanup_keys(self) -> None:
         """Delete all test keys."""
         from contextlib import suppress
+
         if self._client and self._keys:
             with suppress(Exception):
                 await self._client.delete(*self._keys)

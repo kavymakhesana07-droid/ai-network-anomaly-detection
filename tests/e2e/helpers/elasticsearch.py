@@ -76,6 +76,7 @@ class ElasticsearchTestHelper:
         """Delete an index."""
         full_name = self._prefixed(name)
         from contextlib import suppress
+
         with suppress(Exception):
             await self._client.indices.delete(index=full_name)
             if full_name in self._created_indices:

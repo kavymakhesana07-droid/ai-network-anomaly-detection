@@ -76,6 +76,7 @@ class KafkaTestHelper:
         """Delete a test topic."""
         full_name = f"{self.test_topics_prefix}{name}"
         from contextlib import suppress
+
         with suppress(Exception):
             await self._admin_client.delete_topics([full_name])
             if full_name in self._created_topics:

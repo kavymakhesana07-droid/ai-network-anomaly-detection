@@ -15,7 +15,7 @@ aiokafka==0.10.0
 confluent-kafka==2.5.0
 
 # Serialization
-msgpack==1.0.8
+msgpack==1.2.3
 orjson==3.10.0
 protobuf==4.25.3
 

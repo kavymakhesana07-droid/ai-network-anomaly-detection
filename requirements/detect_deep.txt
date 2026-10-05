@@ -9,7 +9,7 @@
 -r base.txt
 
 # Deep learning (PyPI torch bundles CUDA; CPU-only fallback happens at runtime)
-torch==2.4.0
+torch==2.14.1
 lightning==2.3.3
 
 # ONNX export (train) + runtime (serve)
@@ -17,8 +17,8 @@ onnx==1.16.1
 onnxruntime==1.19.2
 
 # Tabular
-numpy==1.26.4
-pandas==2.2.2
+numpy==2.4.6
+pandas==3.0.6
 
 # Experiment tracking (best-effort; training continues without a server)
 mlflow==2.15.1

@@ -2,20 +2,20 @@
 -r base.txt
 
 # Core ML
-numpy==1.26.4
+numpy==2.4.6
 scipy==1.13.1
-scikit-learn==1.5.0
-pandas==2.2.2
+scikit-learn==1.9.1
+pandas==3.0.6
 polars==1.9.0
 
 # Deep Learning
-torch==2.4.0
-torchvision==0.19.0
-torchaudio==2.4.0
+torch==2.14.1
+torchvision==0.29.1
+torchaudio==2.11.0
 lightning==2.3.3
 
 # Gradient Boosting
-xgboost==2.1.1
+xgboost==3.2.0
 lightgbm==4.4.0
 
 # ONNX / Model Serving
@@ -30,7 +30,7 @@ onnxruntime-gpu==1.19.2  # optional, for GPU inference
 #   pip install torch_geometric
 #   pip install pyg_lib torch_scatter -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
 # Kept out of the default install so CI stays reproducible on py3.11.
-torch-geometric==2.6.0
+torch-geometric==2.8.0.post1
 
 # Experiment Tracking
 mlflow==2.15.1
@@ -54,7 +54,7 @@ plotly==5.23.0
 
 # Model serving (future days - NOT shipped in any image yet)
 tritonclient==2.49.0  # for Triton Inference Server
-torchserve==0.11.0
+torchserve==0.12.0
 
 # Advanced ML (future days - LoRA fine-tuning, hyperparameter search)
 transformers==4.42.0

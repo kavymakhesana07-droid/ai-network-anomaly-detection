@@ -84,5 +84,5 @@ Currently no formal bug bounty program. Responsible disclosure acknowledged in:
 
 ## Contact
 
-**Security Team:** security@anomaly-detection.example.com
+**Security Team:** security@anomaly-detection.example.com, kavymakhesana07@gmail.com
 **PGP:** https://github.com/kavymakhesana07-droid.gpg

@@ -93,6 +93,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
+        continue-on-error: true
 
   # =========================================================================
   # Integration Tests (requires services)

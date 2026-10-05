@@ -13,7 +13,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 
 ### How to Report
 
-**Email:** security@anomaly-detection.example.com
+**Email:** kavymakhesana07@gmail.com
 
 **PGP Key:** Available at https://github.com/kavymakhesana07-droid.gpg
 
@@ -84,5 +84,5 @@ Currently no formal bug bounty program. Responsible disclosure acknowledged in:
 
 ## Contact
 
-**Security Team:** security@anomaly-detection.example.com, kavymakhesana07@gmail.com
+**Security Team:** kavymakhesana07@gmail.com
 **PGP:** https://github.com/kavymakhesana07-droid.gpg

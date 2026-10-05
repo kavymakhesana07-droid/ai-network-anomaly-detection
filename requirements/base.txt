@@ -16,7 +16,7 @@ confluent-kafka==2.5.0
 
 # Serialization
 msgpack==1.0.8
-orjson==3.10.0
+orjson==3.12.0
 protobuf==4.25.3
 
 # Observability

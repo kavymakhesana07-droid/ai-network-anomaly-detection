@@ -88,9 +88,9 @@ output = [
     "opensearch-py>=2.5.0",
     "slack-sdk>=3.26.0",
     "pagerduty>=5.0.2",
-    "fastapi>=0.111.0",
-    "uvicorn>=0.30.1",
-    "streamlit>=1.37.0",
+    "fastapi>=0.142.2",
+    "uvicorn>=0.54.0",
+    "streamlit>=1.64.0",
 ]
 dev = [
     "pytest>=8.2.2",

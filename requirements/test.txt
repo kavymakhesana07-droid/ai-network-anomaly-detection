@@ -16,7 +16,7 @@ pyyaml==6.0.1
 # "AttributeError: 'Package' object has no attribute 'obj'" against
 # coverage 7.x, which pip installs by default. This trio is verified coherent.
 pytest==8.3.4
-pytest-asyncio==0.25.3
+pytest-asyncio==1.4.0
 pytest-cov==6.0.0
 coverage[toml]==7.6.12
 pytest-mock==3.14.0

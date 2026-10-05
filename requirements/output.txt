@@ -3,7 +3,7 @@
 
 # SIEM
 elasticsearch==8.14.0
-opensearch-py==2.5.0
+opensearch-py==3.2.0
 
 # ChatOps
 slack-sdk==3.26.0

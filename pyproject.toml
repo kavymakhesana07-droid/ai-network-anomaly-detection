@@ -85,7 +85,7 @@ alerting = [
 ]
 output = [
     "elasticsearch>=8.14.0",
-    "opensearch-py>=2.5.0",
+    "opensearch-py>=3.2.0",
     "slack-sdk>=3.26.0",
     "pagerduty>=5.0.2",
     "fastapi>=0.111.0",

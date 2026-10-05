@@ -101,12 +101,8 @@ jobs:
   test-integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    # Skipped until tests/integration/ contains actual tests. Enabling the
-    # Redpanda service container for an empty test dir just burns runner minutes
-    # and adds a flaky dependency. Flip to true on the day integration tests land.
-    # Re-enable on the day integration tests land. Until then this only spins up
-    # a Redpanda container for an empty test directory.
-    if: false
+    # Run on push to master/develop, PRs, and manual dispatch
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     services:
       redpanda:
         image: docker.redpanda.com/redpandadata/redpanda:v24.1.1
@@ -132,6 +128,7 @@ jobs:
           pip install -r requirements/base.txt
           pip install -r requirements/ingest.txt
           pip install pytest pytest-asyncio
+          pip install kafka-python elasticsearch redis httpx
 
       - name: Run integration tests
         run: pytest tests/integration -v
@@ -267,7 +264,8 @@ jobs:
   deploy-dev:
     name: Deploy to Dev
     needs: [build, test-unit]
-    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    # Run on push to develop/master, or manual dispatch
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     # NOTE: Requires secrets.KUBECONFIG_DEV. Disabled until Day 9 when the
     # k3d dev overlay is verified end-to-end.
     runs-on: ubuntu-latest
@@ -301,7 +299,8 @@ jobs:
   deploy-prod:
     name: Deploy to Prod
     needs: [build, test-unit]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch' && inputs.deploy_env == 'prod'
+    # Run on push to master or manual dispatch
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
     steps:

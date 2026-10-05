@@ -1,0 +1,47 @@
+# Code Owners
+
+# Global owners
+* @kavymakhesana07-droid
+
+# Ingestion layer
+/ingestion/ @kavymakhesana07-droid
+
+# Feature extraction
+/feature_extraction/ @kavymakhesana07-droid
+
+# Detection models
+/detection/fast_path/ @kavymakhesana07-droid
+/detection/deep_path/ @kavymakhesana07-droid
+/detection/xgboost/ @kavymakhesana07-droid
+/detection/model_registry/ @kavymakhesana07-droid
+
+# Alerting & output
+/alerting/ @kavymakhesana07-droid
+/output/ @kavymakhesana07-droid
+
+# Infrastructure
+/k8s/ @kavymakhesana07-droid
+/docker-compose.yml @kavymakhesana07-droid
+docker-compose.e2e.yml @kavymakhesana07-droid
+
+# Configuration
+/requirements/ @kavymakhesana07-droid
+/pyproject.toml @kavymakhesana07-droid
+Makefile @kavymakhesana07-droid
+
+# Documentation
+/docs/ @kavymakhesana07-droid
+README.md @kavymakhesana07-droid
+
+# CI/CD
+/.github/ @kavymakhesana07-droid
+
+# Security
+SECURITY.md @kavymakhesana07-droid
+SECURITY.md @kavymakhesana07-droid
+
+# Tests
+/tests/ @kavymakhesana07-droid
+
+# Scripts
+/scripts/ @kavymakhesana07-droid

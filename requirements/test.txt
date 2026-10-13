@@ -10,7 +10,7 @@
 # GitHub Actions runner disk ("No space left on device").
 
 pydantic==2.8.2
-pyyaml==6.0.1
+pyyaml==6.0.3
 
 # NOTE: coverage is pinned explicitly. pytest-cov 5.x raises
 # "AttributeError: 'Package' object has no attribute 'obj'" against

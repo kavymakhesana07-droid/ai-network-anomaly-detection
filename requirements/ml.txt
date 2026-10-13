@@ -61,4 +61,4 @@ transformers==4.42.0
 accelerate==0.31.0
 peft==0.11.0
 optuna==4.0.0
-ray==2.40.0  # for distributed tuning
+ray==2.59.0  # for distributed tuning

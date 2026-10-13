@@ -74,7 +74,7 @@ detect_deep = [
     "transformers>=4.42.0",
     "accelerate>=0.31.0",
     "optuna>=4.0.0",
-    "ray>=2.40.0",
+    "ray>=2.59.0",
 ]
 alerting = [
     "ipwhois>=1.2.0",

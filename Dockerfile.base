@@ -1,7 +1,7 @@
 # Base image for all Python services
 # Build: docker build -f Dockerfile.base -t anomaly-detection/base:latest .
 
-FROM python:3.11-slim AS base
+FROM python:3.14-slim AS base
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \

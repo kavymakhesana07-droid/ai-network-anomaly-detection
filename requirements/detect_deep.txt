@@ -14,7 +14,7 @@ lightning==2.3.3
 
 # ONNX export (train) + runtime (serve)
 onnx==1.16.1
-onnxruntime==1.19.2
+onnxruntime==1.31.0
 
 # Tabular
 numpy==1.26.4

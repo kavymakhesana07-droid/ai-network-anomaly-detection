@@ -20,7 +20,7 @@ lightgbm==4.4.0
 
 # ONNX / Model Serving
 onnx==1.16.1
-onnxruntime==1.19.2
+onnxruntime==1.31.0
 onnxruntime-gpu==1.19.2  # optional, for GPU inference
 
 # Graph Neural Networks

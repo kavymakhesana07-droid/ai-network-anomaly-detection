@@ -6,6 +6,7 @@ No external ML dependencies (scikit-learn, onnxruntime) so unit tests run fast.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from dataclasses import dataclass
 
 

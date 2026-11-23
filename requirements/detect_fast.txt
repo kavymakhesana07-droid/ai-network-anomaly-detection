@@ -2,9 +2,9 @@
 -r base.txt
 
 # Lightweight ML
-scikit-learn==1.5.0
+scikit-learn==1.9.1
 joblib==1.4.2
-numpy==1.26.4
+numpy==2.4.6
 
 # ONNX Runtime for fast inference
 onnxruntime==1.19.2
